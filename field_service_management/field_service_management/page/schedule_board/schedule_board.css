@@ -6103,7 +6103,7 @@ fieldset:disabled .btn {
 
 @media (min-width:576px) {
     .modal-dialog {
-        max-width: 500px;
+        max-width: 850px;
         margin: 1.75rem auto
     }
 
@@ -11721,10 +11721,16 @@ fieldset:disabled .btn {
 
 /*# sourceMappingURL=bootstrap.min.css.map */
 
+
 .scrollable-x {
     width: 100%;      /* or any desired width */
     overflow-x: auto; /* enables scrolling on the x-axis */
     white-space: nowrap; /* prevents line breaks to allow horizontal scrolling */
 }
 
+
+.scrollable-y {
+    overflow-y: auto;
+    max-height: 100vh;
+}
 

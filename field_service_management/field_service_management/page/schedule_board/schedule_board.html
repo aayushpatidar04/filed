@@ -1,5 +1,5 @@
 <div class="row">
-    <div class="col-3">
+    <div class="col-3 scrollable-y">
         <h4 class="d-flex">
             <svg xmlns="http://www.w3.org/2000/svg" style="height: 25px; padding-top: 5px;" viewBox="0 0 448 512">
                 <path
@@ -23,12 +23,13 @@
                 <strong class="text-danger">Issue Type:</strong> <span class="text-danger">{{ issue.issue_type
                     }}</span><br>
                 <span><strong>Assigned to:</strong> {{ issue._assign }}<a href="javascript:void(0)"
-                        class="text-muted btn btn-default icon-btn add-assignment-btn" data-toggle="modal" data-target="#formModal{{ issue.name }}"> <svg class="icon icon-sm">
+                        class="text-muted btn btn-default icon-btn add-assignment-btn" data-toggle="modal"
+                        data-target="#formModal{{ issue.name }}"> <svg class="icon icon-sm">
                             <use href="#icon-add"></use>
                         </svg> </a></span>
             </div>
         </div>
-        <div class="modal fade" id="issueModal{{ issue.name }}" tabindex="-1" role="dialog"
+        <div class="modal issue-modal fade" id="issueModal{{ issue.name }}" tabindex="-1" role="dialog"
             aria-labelledby="issueModalLabel{{ issue.name }}" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
@@ -39,12 +40,21 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <p><strong>Issue Name:</strong> {{ issue.name }}</p>
-                        <p><strong>Assigned to:</strong> {{ issue._assign }}</p>
-                        <p><strong>Issue Type:</strong> {{ issue.issue_type }}</p>
-                        <p><strong>Description:</strong> {{ issue.description }}</p>
-                        <p><strong>Status:</strong> {{ issue.status }}</p>
-                        <p><strong>Creation Date:</strong> {{ issue.creation }}</p>
+                        <div class="row">
+                            <div class="col-6">
+                                <p><strong>Issue Name:</strong> {{ issue.name }}</p>
+                                <p><strong>Assigned to:</strong> {{ issue._assign }}</p>
+                                <p><strong>Issue Type:</strong> {{ issue.issue_type }}</p>
+                                <p><strong>Status:</strong> {{ issue.status }}</p>
+                                <p><strong>Creation Date:</strong> {{ issue.creation }}</p>
+                            </div>
+                            <div class="col-6">
+                                <div id="map-{{ issue.name }}" style="width: 400px; height: 400px;"></div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <p><strong>Description:</strong> {{ issue.description }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -60,28 +70,31 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <form id="custom-form" method="POST">
+                        <form id="custom-form-{{ issue.name }}" class="custom-form" method="POST">
                             <label for="code">Issue Code:</label>
-                            <input class="form-control" type="text" id="code" name="code" value="{{ issue.name }}" required readonly><br><br>
+                            <input class="form-control code" type="text" name="code" value="{{ issue.name }}" required
+                                readonly><br><br>
 
                             <label for="technician">Technicians:</label>
-                            <select class="form-select" id="technician" name="technician[]" multiple required>
+                            <select class="form-select technician" name="technician[]" multiple="multiple" required>
                                 <option value="" selected disabled>Select Service Technicians</option>
                                 {% for tech in technicians %}
-                                <option value="{{ tech.email }}" {% if issue.assigned %} {% if tech.email in issue.assigned %} selected {% endif %} {% endif %}>{{ tech.email }}</option>
+                                <option value="{{ tech.email }}" {% if issue.assigned %} {% if tech.email in
+                                    issue.assigned %} selected {% endif %} {% endif %}>{{ tech.email }}</option>
                                 {% endfor %}
                             </select><br><br>
 
                             <label for="date">Date:</label>
-                            <input class="form-control" type="date" id="date" name="date" required><br><br>
+                            <input class="form-control date" type="date" name="date" required><br><br>
 
                             <label for="stime">Start Time</label>
-                            <input class="form-control" type="time" id="stime" name="stime" required><br><br>
+                            <input class="form-control stime" type="time" name="stime" required><br><br>
 
                             <label for="etime">End Time:</label>
-                            <input class="form-control" type="time" id="etime" name="etime" required><br><br>
+                            <input class="form-control etime" type="time" name="etime" required><br><br>
 
-                            <button type="button" id="submit" class="btn btn-success">Submit</button>
+                            <button type="button" class="submit btn btn-success"
+                                data-issue="{{ issue.name }}">Submit</button>
                         </form>
                     </div>
                 </div>
@@ -139,49 +152,7 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        document.getElementById("date").addEventListener("change", function () {
-            console.log(document.getElementById("date").value);
-        });
-    });
-</script>
 
 
-
-
-<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script> -->
-<!-- <script>
-    document.getElementById("submit").addEventListener("click", function (event) {
-        // event.preventDefault();
-        // Collect form data
-        const formData = {
-            code: document.getElementById("code").value,
-            technicians: document.getElementById("technician").value,
-            date: document.getElementById("date").value,
-            etime: document.getElementById("etime").value,
-            stime: document.getElementById("stime").value
-        };
-        console.log(formData);
-
-        // Make an API call to Frappe to save the data in your Doctype
-        frappe.call({
-            method: "field_service_management.field_service_management.page.schedule_board.schedule_board.save_form_data",
-            args: {
-                form_data: formData
-            },
-            callback: function (response) {
-                if (response.message) {
-                    alert("Issue assigned successfully!");
-                } else {
-                    alert("Form submission failed!");
-                }
-            },
-            error: function (error) {
-                console.error(error);
-                alert("An error occurred while submitting the form!");
-            }
-        });
-    });
-</script> -->
+<!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> -->
