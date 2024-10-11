@@ -9,6 +9,7 @@ from datetime import timedelta
 def get_context():
     context = {}
     user = frappe.session.user
+    
     if user == "Administrator":
         issues = frappe.get_all(
             "Issue",
@@ -31,10 +32,10 @@ def get_context():
     role_profile = frappe.db.get_value("User", user, "role_profile_name")
     if role_profile == "Service Coordinator Profile":
         # Fetch the user's territory from User Permissions
+        
         territory = frappe.db.get_value(
             "User Permission", {"user": user, "allow": "Territory"}, "for_value"
         )
-
         # Fetch issues based on the user's territory
         issues = frappe.get_all(
             "Issue",
@@ -54,15 +55,13 @@ def get_context():
             filters={"role_profile_name": "Service Technician Role Profile"},
             fields=["email", "user_image", "full_name"],
         )
-
         # Filter technicians based on their territory in User Permission
         technician_list = []
         for tech in technicians:
             tech_territory = frappe.db.get_value(
-                "User Permission",
-                {"user": tech["email"], "allow": "Territory"},
-                "for_value",
+                "User Permission", {"user": tech["email"], "allow": "Territory"}, "for_value"
             )
+            # tech_territory = tech_territory[0].for_value
             if tech_territory == territory:
                 technician_list.append(tech)
         technicians = technician_list
@@ -75,11 +74,7 @@ def get_context():
             except json.JSONDecodeError:
                 issue._assign = "No one assigned"
     context["issues"] = issues
-    technicians = frappe.get_all(
-        "User",
-        filters={"role_profile_name": "Service Technician Role Profile"},
-        fields=["email", "user_image", "full_name"],
-    )
+    
     date = datetime.now().date()
     time_slots = [
         {"label": "9:00 AM", "time": timedelta(hours=9)},
@@ -118,14 +113,18 @@ def get_context():
                         break
             if task_in_slot:
                 html_content += f"""
-                <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: green; border-right: 1px solid #000;" class="px-1 text-white text-center">
+                <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: green; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center">
                     {task_in_slot['issue_code']}
                 </div>
                 """
                 count += task_in_slot["duration_in_hours"] - 1
             else:
                 if count == 0:
-                    html_content += '<div style="width: 100px; border-right: 1px solid #000;" class="px-1"></div>'
+                    html_content += f'<div style="width: 100px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" class="px-1 drop-zone">-</div>'
+                elif count % 1 == 0.5:
+                    slot['time'] += timedelta(minutes=30)
+                    html_content += f'<div style="width: 50px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" class="px-1 drop-zone">-</div>'
+                    count -= 0.5
                 else:
                     count -= 1
         tech.html_content = html_content
@@ -215,4 +214,5 @@ def get_cords():
     )
     """
     technicians = frappe.db.sql(query, as_dict=True)
+    
     return technicians

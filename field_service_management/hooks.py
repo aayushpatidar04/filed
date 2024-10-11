@@ -7,6 +7,16 @@ app_license = "MIT"
 
 # Includes in <head>
 # ------------------
+app_include_js = [
+    "https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+]
+app_include_css = [
+    "https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+]
+
+pages = [
+    {"name": "schedule_board", "title": "Schedule Board", "path": "field_service_management.page.schedule_board.schedule_board"},
+]
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/field_service_management/css/field_service_management.css"

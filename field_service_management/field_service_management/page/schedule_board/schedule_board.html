@@ -1,3 +1,4 @@
+
 <div class="row">
     <div class="col-3 scrollable-y">
         <h4 class="d-flex">
@@ -9,7 +10,7 @@
         </h4>
         {% if issues %}
         {% for issue in issues %}
-        <div class="card mb-1">
+        <div class="card mb-1 drag" draggable="true" id="{{ issue.name }}">
             <div class="card-body">
 
                 <h6 class="text-success mb-0">{{ issue.subject }}&nbsp;&nbsp;&nbsp;<span><a href="javascript:void(0)"
@@ -22,11 +23,13 @@
                 <small class="mt-0">{{ issue.name }}</small><br>
                 <strong class="text-danger">Issue Type:</strong> <span class="text-danger">{{ issue.issue_type
                     }}</span><br>
-                <span><strong>Assigned to:</strong> {{ issue._assign }}<a href="javascript:void(0)"
+                <span><strong>Assigned to:</strong> {{ issue._assign }}
+                    <!-- <a href="javascript:void(0)"
                         class="text-muted btn btn-default icon-btn add-assignment-btn" data-toggle="modal"
                         data-target="#formModal{{ issue.name }}"> <svg class="icon icon-sm">
                             <use href="#icon-add"></use>
-                        </svg> </a></span>
+                        </svg> </a> -->
+                </span>
             </div>
         </div>
         <div class="modal issue-modal fade" id="issueModal{{ issue.name }}" tabindex="-1" role="dialog"
@@ -75,7 +78,7 @@
                             <input class="form-control code" type="text" name="code" value="{{ issue.name }}" required
                                 readonly><br><br>
 
-                            <label for="technician">Technicians:</label>
+                            <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label>
                             <select class="form-select technician" name="technician[]" multiple="multiple" required>
                                 <option value="" selected disabled>Select Service Technicians</option>
                                 {% for tech in technicians %}
@@ -88,10 +91,11 @@
                             <input class="form-control date" type="date" name="date" required><br><br>
 
                             <label for="stime">Start Time</label>
-                            <input class="form-control stime" type="time" name="stime" required><br><br>
-
+                            <input class="form-control stime" type="time" name="stime" required readonly><br><br>
+                            
                             <label for="etime">End Time:</label>
-                            <input class="form-control etime" type="time" name="etime" required><br><br>
+                            <input class="form-control etime" type="time" name="etime" required>
+                            <small><span class="text-danger etime-error"></span></small><br><br>
 
                             <button type="button" class="submit btn btn-success"
                                 data-issue="{{ issue.name }}">Submit</button>
@@ -106,7 +110,7 @@
         {% endif %}
 
     </div>
-    <div class="col-9">
+    <div class="col-9 scrollable-y">
         <div class="card">
             <div class="card-header d-flex" style="justify-content: space-between;">
                 <h5>Service Technician Calendar</h5>
@@ -151,8 +155,14 @@
         </div>
     </div>
 </div>
+<br><br><br><br><br><br>
+
+
+
+
 
 
 
 <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> -->
+
