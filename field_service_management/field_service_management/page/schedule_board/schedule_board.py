@@ -113,10 +113,55 @@ def get_context():
                         break
             if task_in_slot:
                 html_content += f"""
-                <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: green; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center">
-                    {task_in_slot['issue_code']}
+                <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: green; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag type2" draggable="true" id="task-{task_in_slot['issue_code']}">
+                    <a href="javascript:void(0)"
+                        class="text-white" data-toggle="modal"
+                        data-target="#taskModal{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
                 </div>
                 """
+                html_content += f"""
+                <div class="modal fade" id="taskModal{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
+                    aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="taskModalLabel{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="custom-form-{task_in_slot['issue_code']}" class="custom-form" method="POST">
+                                    <label for="code">Issue Code:</label>
+                                    <input class="form-control code" type="text" name="code" value="{task_in_slot['issue_code']}" required
+                                        readonly><br><br>
+
+                                    <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label>
+                                    <select class="form-select technician" name="technician[]" multiple="multiple" required>
+                                        <option value="" selected disabled>Select Service Technicians</option>
+                                        {% for item in technicians %}
+                                        <option value="{{ item.email }}" {% if item.email ==
+                                            tech %} selected {% endif %}>{{ item.email }}</option>
+                                        {% endfor %}
+                                    </select><br><br>
+
+                                    <label for="date">Date:</label>
+                                    <input class="form-control date" type="date" name="date" value="{date}" required><br><br>
+
+                                    <label for="stime">Start Time</label>
+                                    <input class="form-control stime" type="time" name="stime" value="{task_in_slot['stime']}" required readonly><br><br>
+                                    
+                                    <label for="etime">End Time:</label>
+                                    <input class="form-control etime" type="time" name="etime" value="{task_in_slot['etime']}" required>
+                                    <small><span class="text-danger etime-error"></span></small><br><br>
+
+                                    <button type="button" class="submit btn btn-success"
+                                        data-issue="{task_in_slot['issue_code']}">Submit</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>"""
                 count += task_in_slot["duration_in_hours"] - 1
             else:
                 if count == 0:

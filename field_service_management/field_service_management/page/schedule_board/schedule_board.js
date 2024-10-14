@@ -135,11 +135,16 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					const slotTime = $(this).data('time');
 					const tech = $(this).data('tech');
 					const card = $('#' + cardId); // Select the card by ID
+					const card2 = $('#task-' + cardId); // Select the card by ID
 					$(this).removeClass('drop-hover'); // Remove hover class
 					$(this).css('background-color', 'cyan'); // Reset background color
 
 					// Open modal for the dropped card using its issue name
-					openModal(cardId, slotTime, tech);
+					if(card.hasClass('type1')){
+						openModal(cardId, slotTime, tech);
+					}else if(card2.hasClass('type2')){
+						openModal2(cardId);
+					}
 				});
 			});
 

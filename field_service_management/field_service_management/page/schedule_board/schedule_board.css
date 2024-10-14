@@ -26,7 +26,7 @@
 
 .drag {
     padding: 10px;
-    margin-bottom: 5px;
+    /* margin-bottom: 5px; */
     cursor: grab;
     user-select: none; 
     
