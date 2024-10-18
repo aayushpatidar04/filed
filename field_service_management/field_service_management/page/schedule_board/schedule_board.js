@@ -101,6 +101,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 		});
 
 		setTimeout(function () {
+			
 			var drags = $('.drag');
 			$('.drag').each(function () {
 				$(this).on('dragstart', function (e) {
@@ -133,22 +134,22 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					e.preventDefault(); // Prevent default action
 					const cardId = e.originalEvent.dataTransfer.getData('text/plain'); // Get the ID of the dragged card
 					const slotTime = $(this).data('time');
+					const not_available = $(this).data('na');
 					const tech = $(this).data('tech');
 					const card = $('#' + cardId); // Select the card by ID
-					const card2 = $('#task-' + cardId); // Select the card by ID
 					$(this).removeClass('drop-hover'); // Remove hover class
 					$(this).css('background-color', 'cyan'); // Reset background color
-
 					// Open modal for the dropped card using its issue name
-					if(card.hasClass('type1')){
-						openModal(cardId, slotTime, tech);
-					}else if(card2.hasClass('type2')){
-						openModal2(cardId);
+					if(card.data('type') == 'type1'){
+						openModal(cardId, slotTime, tech, not_available);
+					}else if(card.data('type') == 'type2'){
+						const duration = card.data('duration');
+						openModal2(cardId, slotTime, tech, duration, not_available);
 					}
 				});
 			});
 
-			function openModal(issueName, slot, tech) {
+			function openModal(issueName, slot, tech, na) {
 				const modalId = `formModal${issueName}`; // Construct the modal ID
 				const modal = $(`#${modalId}`); // Select the modal using jQuery
 
@@ -159,9 +160,81 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
 					const day = String(currentDate.getDate()).padStart(2, '0');
 					modalInstance.show(); // Show the modal
-					modal.find('.stime').val(slot.substring(0, 5));
+					const [hours, minutes, seconds] = slot.split(':').map(Number);
+					if(hours < 10){
+						const stime_val = '0' + slot.substring(0, 4)
+						modal.find('.stime').val(stime_val);
+					}else{
+						modal.find('.stime').val(slot.substring(0, 5));
+					}
 					modal.find('.etime').data('stime', slot.substring(0, 5));
 					modal.find('.technician').val(tech).change();
+					if(typeof na === 'string'){
+						try {
+							na = JSON.parse(na.replace(/'/g, '"')); // Convert single quotes to double quotes and parse the string
+						} catch (e) {
+							console.error('Error parsing na:', e);
+						}
+						$.each(na, function(index, value) {
+							const option = modal.find('.technician option[value="' + value + '"]');
+							
+							if (option.length) {
+								option.prop('disabled', true);
+								option.css('color', 'red');
+							}
+						});
+					}else{
+						modal.find('.technician option').prop('disabled', false).css('color', '');
+					}
+					const formattedDate = `${year}-${month}-${day}`;
+					modal.find('.date').val(formattedDate).change();
+				} else {
+					console.error(`Modal with ID ${modalId} not found.`);
+				}
+			}
+
+
+			function openModal2(issueName, slot, tech, duration, na) {
+				const modalId = `taskModal${issueName}`; // Construct the modal ID
+				const modal = $(`#${modalId}`); // Select the modal using jQuery
+
+				if (modal.length) { // Check if the modal exists
+					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
+					const currentDate = new Date();
+					const year = currentDate.getFullYear();
+					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+					const day = String(currentDate.getDate()).padStart(2, '0');
+					modalInstance.show(); // Show the modal
+					const [hours, minutes, seconds] = slot.split(':').map(Number);
+					let startTime = new Date();
+					startTime.setHours(hours, minutes, seconds);
+					let etime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
+					if(hours < 10){
+						const stime_val = '0' + slot.substring(0, 4)
+						modal.find('.stime').val(stime_val);
+					}else{
+						modal.find('.stime').val(slot.substring(0, 5));
+					}
+					modal.find('.etime').val(etime.toTimeString().substring(0, 5));
+					modal.find('.etime').data('stime', slot.substring(0, 5));
+					modal.find('.technician').val(tech).change();
+					if(typeof na === 'string'){
+						try {
+							na = JSON.parse(na.replace(/'/g, '"')); // Convert single quotes to double quotes and parse the string
+						} catch (e) {
+							console.error('Error parsing na:', e);
+						}
+						$.each(na, function(index, value) {
+							const option = modal.find('.technician option[value="' + value + '"]');
+							
+							if (option.length) {
+								option.prop('disabled', true);
+								option.css('color', 'red');
+							}
+						});
+					}else{
+						modal.find('.technician option').prop('disabled', false).css('color', '');
+					}
 					const formattedDate = `${year}-${month}-${day}`;
 					modal.find('.date').val(formattedDate).change();
 				} else {
@@ -171,6 +244,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 			$(document).on('click', '.close', function () {
 				$(this).closest('.modal').modal('hide'); // Ensure the modal hides on close
 			});
+			$('.technician').select2();
 
 			var etime = $('.etime');
 			etime.each(function () {
@@ -195,7 +269,40 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 			});
 		}, 1000);
 
+		//update modal
+		$(document).on("click", ".update", function () {
+			const issueId = $(this).data("issue");
+			const form = $("#custom-form-" + issueId);
 
+			// Collect form data
+			const formData = {
+				code: form.find(".code").val(),
+				technicians: form.find(".technician").val(),
+				date: form.find(".date").val(),
+				stime: form.find(".stime").val(),
+				etime: form.find(".etime").val()
+			};
+
+			// Make an API call to Frappe to save the data in your Doctype
+			frappe.call({
+				method: "field_service_management.field_service_management.page.schedule_board.schedule_board.update_form_data",
+				args: {
+					form_data: formData
+				},
+				callback: function (response) {
+					if (response.message.success) {
+						alert("Issue updated successfully!");
+						window.location.reload();
+					} else {
+						alert(`Form submission failed!" ${response.message.message}`);
+					}
+				},
+				error: function (error) {
+					console.error(error);
+					alert("An error occurred while submitting the form!");
+				}
+			});
+		});
 
 	});
 

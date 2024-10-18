@@ -77,18 +77,18 @@ def get_context():
     
     date = datetime.now().date()
     time_slots = [
-        {"label": "9:00 AM", "time": timedelta(hours=9)},
+        {"label": "09:00 AM", "time": timedelta(hours=9)},
         {"label": "10:00 AM", "time": timedelta(hours=10)},
         {"label": "11:00 AM", "time": timedelta(hours=11)},
         {"label": "12:00 PM", "time": timedelta(hours=12)},
-        {"label": "1:00 PM", "time": timedelta(hours=13)},
-        {"label": "2:00 PM", "time": timedelta(hours=14)},
-        {"label": "3:00 PM", "time": timedelta(hours=15)},
-        {"label": "4:00 PM", "time": timedelta(hours=16)},
-        {"label": "5:00 PM", "time": timedelta(hours=17)},
-        {"label": "6:00 PM", "time": timedelta(hours=18)},
-        {"label": "7:00 PM", "time": timedelta(hours=19)},
-        {"label": "8:00 PM", "time": timedelta(hours=20)},
+        {"label": "01:00 PM", "time": timedelta(hours=13)},
+        {"label": "02:00 PM", "time": timedelta(hours=14)},
+        {"label": "03:00 PM", "time": timedelta(hours=15)},
+        {"label": "04:00 PM", "time": timedelta(hours=16)},
+        {"label": "05:00 PM", "time": timedelta(hours=17)},
+        {"label": "06:00 PM", "time": timedelta(hours=18)},
+        {"label": "07:00 PM", "time": timedelta(hours=19)},
+        {"label": "08:00 PM", "time": timedelta(hours=20)},
     ]
     for tech in technicians:
         html_content = ""
@@ -104,6 +104,16 @@ def get_context():
         tech.tasks = tasks
         count = 0
         for slot in time_slots:
+            not_available = []
+            ts = frappe.get_all(
+                "Assigned Tasks",
+                filters={"date": date},
+                fields=["issue_code", "stime", "etime", "rescheduled", "technician"],
+            )
+            for t in ts:
+                if t.stime <= slot["time"] and t.etime > slot["time"]:
+                    not_available.append(t.technician)
+            slot['not_available'] = not_available
             task_in_slot = None
             for task in tasks:
                 if task.stime <= slot["time"] and task.etime > slot["time"]:
@@ -113,14 +123,14 @@ def get_context():
                         break
             if task_in_slot:
                 html_content += f"""
-                <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: green; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag type2" draggable="true" id="task-{task_in_slot['issue_code']}">
+                <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: red; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
                     <a href="javascript:void(0)"
                         class="text-white" data-toggle="modal"
-                        data-target="#taskModal{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
+                        data-target="#taskModaltask-{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
                 </div>
                 """
                 html_content += f"""
-                <div class="modal fade" id="taskModal{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
+                <div class="modal fade" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
                     aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
                     <div class="modal-dialog" role="document">
                         <div class="modal-content">
@@ -136,45 +146,45 @@ def get_context():
                                     <input class="form-control code" type="text" name="code" value="{task_in_slot['issue_code']}" required
                                         readonly><br><br>
 
-                                    <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label>
-                                    <select class="form-select technician" name="technician[]" multiple="multiple" required>
-                                        <option value="" selected disabled>Select Service Technicians</option>
-                                        {% for item in technicians %}
-                                        <option value="{{ item.email }}" {% if item.email ==
-                                            tech %} selected {% endif %}>{{ item.email }}</option>
-                                        {% endfor %}
-                                    </select><br><br>
+                                    <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label><br>
+                                    <select class="form-select technician" style="width:100%" name="technician[]" multiple="multiple" required>"""
+                for item in technicians:
+                    selected = 'selected' if item.email == tech.email else ''
+                    html_content += '<option value="{email}" {selected}>{email}</option>'.format(
+                        email=item.email,
+                        selected=selected
+                    )                                   
+                html_content += """ </select><br><br>
 
                                     <label for="date">Date:</label>
                                     <input class="form-control date" type="date" name="date" value="{date}" required><br><br>
 
                                     <label for="stime">Start Time</label>
-                                    <input class="form-control stime" type="time" name="stime" value="{task_in_slot['stime']}" required readonly><br><br>
+                                    <input class="form-control stime" type="time" name="stime" value="{stime}" required readonly><br><br>
                                     
                                     <label for="etime">End Time:</label>
-                                    <input class="form-control etime" type="time" name="etime" value="{task_in_slot['etime']}" required>
+                                    <input class="form-control etime" type="time" name="etime" value="{etime}" required readonly>
                                     <small><span class="text-danger etime-error"></span></small><br><br>
 
-                                    <button type="button" class="submit btn btn-success"
-                                        data-issue="{task_in_slot['issue_code']}">Submit</button>
+                                    <button type="button" class="update btn btn-success"
+                                        data-issue="{issue_code}">Update</button>
                                 </form>
                             </div>
                         </div>
                     </div>
-                </div>"""
+                </div>""".format(issue_code=task_in_slot['issue_code'], date=date, stime=task_in_slot['stime'], etime=task_in_slot['etime'])
                 count += task_in_slot["duration_in_hours"] - 1
             else:
                 if count == 0:
-                    html_content += f'<div style="width: 100px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" class="px-1 drop-zone">-</div>'
+                    html_content += f'<div style="width: 100px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                 elif count % 1 == 0.5:
                     slot['time'] += timedelta(minutes=30)
-                    html_content += f'<div style="width: 50px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" class="px-1 drop-zone">-</div>'
+                    html_content += f'<div style="width: 50px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                     count -= 0.5
                 else:
                     count -= 1
         tech.html_content = html_content
-    context["technicians"] = technicians
-
+    context["technicians"] = technicians    
     context["slots"] = time_slots
     context["message"] = "Welcome to your schedule board!"
     return context
@@ -198,8 +208,8 @@ def save_form_data(form_data):
         for tech in technicians:
             assigned_tasks = frappe.get_all(
                 "Assigned Tasks",
-                filters={"technician": tech},
-                fields=["issue_code", "stime", "etime", "date"],
+                filters={"technician": tech, "date": date},
+                fields=["issue_code", "stime", "etime"],
             )
             for task in assigned_tasks:
                 if (
@@ -261,3 +271,72 @@ def get_cords():
     technicians = frappe.db.sql(query, as_dict=True)
     
     return technicians
+
+
+
+@frappe.whitelist()
+def update_form_data(form_data):
+    # Parse the form_data from the request
+    pass
+    try:
+        form_data = json.loads(form_data)
+        technicians = form_data["technicians"]
+        code = form_data["code"]
+        date = form_data["date"]
+        etime = form_data["etime"]
+        stime = form_data["stime"]
+        hours, minutes = map(int, etime.split(":"))
+        etime = timedelta(hours=hours, minutes=minutes)
+        hours, minutes = map(int, stime.split(":"))
+        stime = timedelta(hours=hours, minutes=minutes)
+
+        for tech in technicians:
+            assigned_tasks = frappe.get_all(
+                "Assigned Tasks",
+                filters={"technician": tech, "date": date},
+                fields=["issue_code", "stime", "etime"],
+            )
+            for task in assigned_tasks:
+                if (
+                    (stime > task.stime and stime < task.etime)
+                    or (etime > task.stime and etime < task.etime)
+                    or (task.stime > stime and task.stime < etime)
+                ):
+                    return {
+                        "error": "error",
+                        "message": f"Time Slot Clash for technician: {tech}",
+                    }
+
+        for tech in technicians:
+
+            new_doc = frappe.get_doc(
+                {
+                    "doctype": "Assigned Tasks",
+                    "issue_code": code,
+                    "technician": tech,
+                    "date": date,
+                    "etime": etime,
+                    "stime": stime,
+                }
+            )
+            new_doc.insert()
+
+        # Optionally, you can update the Issue doctype as well
+        issue_doc = frappe.get_doc("Issue", code)
+        if issue_doc:
+            existing_techs = json.loads(issue_doc._assign) if issue_doc._assign else []
+            for tech in technicians:
+                if tech not in existing_techs:
+                    existing_techs.append(tech)
+            issue_doc._assign = json.dumps(existing_techs)
+            frappe.db.sql(
+                """
+                UPDATE `tabIssue` SET `_assign` = %s WHERE name = %s
+            """,
+                (json.dumps(existing_techs), code),
+            )
+
+            frappe.db.commit()
+        return {"success": "success"}
+    except Exception as e:
+        return {"error": "error", "message": str(e)}

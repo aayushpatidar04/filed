@@ -10,7 +10,7 @@
         </h4>
         {% if issues %}
         {% for issue in issues %}
-        <div class="card mb-1 drag type1" draggable="true" id="{{ issue.name }}">
+        <div class="card mb-1 drag" data-type="type1" draggable="true" id="{{ issue.name }}">
             <div class="card-body">
 
                 <h6 class="text-success mb-0">{{ issue.subject }}&nbsp;&nbsp;&nbsp;<span><a href="javascript:void(0)"
@@ -78,9 +78,8 @@
                             <input class="form-control code" type="text" name="code" value="{{ issue.name }}" required
                                 readonly><br><br>
 
-                            <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label>
-                            <select class="form-select technician" name="technician[]" multiple="multiple" required>
-                                <option value="" selected disabled>Select Service Technicians</option>
+                            <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label><br>
+                            <select class="form-control technician" name="technician[]" style="width:100%;" multiple="multiple" required>
                                 {% for tech in technicians %}
                                 <option value="{{ tech.email }}" {% if issue.assigned %} {% if tech.email in
                                     issue.assigned %} selected {% endif %} {% endif %}>{{ tech.email }}</option>
