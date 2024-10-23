@@ -267,6 +267,20 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					}, 1000);  // Focus back on the input
 				});
 			});
+
+			$('.nav-link').on('click', function(event) {
+				// Prevent default action
+				event.preventDefault();
+	
+				$('.nav-link').removeClass('active');
+				$('.tab-pane').removeClass('show active');
+	
+				$(this).addClass('active');
+	
+				var contentId = $(this).attr('aria-controls');
+				
+				$('#' + contentId ).addClass('show active');
+			});
 		}, 1000);
 
 		//update modal
@@ -302,6 +316,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					alert("An error occurred while submitting the form!");
 				}
 			});
+
 		});
 
 	});

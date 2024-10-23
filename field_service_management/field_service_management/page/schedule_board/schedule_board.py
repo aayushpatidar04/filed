@@ -12,16 +12,17 @@ def get_context():
     
     if user == "Administrator":
         issues = frappe.get_all(
-            "Issue",
+            "Maintenance Visit",
             filters={"_assign": ""},
             fields=[
                 "name",
                 "subject",
                 "status",
                 "creation",
-                "issue_type",
+                "maintenance_type",
                 "_assign",
                 "description",
+                "maintenance_description",
             ],
         )
         technicians = frappe.get_all(
@@ -61,7 +62,6 @@ def get_context():
             tech_territory = frappe.db.get_value(
                 "User Permission", {"user": tech["email"], "allow": "Territory"}, "for_value"
             )
-            # tech_territory = tech_territory[0].for_value
             if tech_territory == territory:
                 technician_list.append(tech)
         technicians = technician_list
@@ -73,6 +73,70 @@ def get_context():
                 issue._assign = " | ".join(assign_list)
             except json.JSONDecodeError:
                 issue._assign = "No one assigned"
+
+        # checklist tree ----------------------------------------------
+        checklist = frappe.get_all(
+            "Maintenance Visit Checklist",
+            filters = {"parent": issue.name},
+            fields = ['item_code', 'item_name', 'heading', 'work_done', 'done_by']
+        )
+        checklist_tree = {}
+        html_content = ""
+        for problem in checklist:
+            key = problem.item_code
+            if key not in checklist_tree:
+                checklist_tree[key] = []
+            checklist_tree[key].append(problem)
+
+        for item_code, products in checklist_tree.items():
+            if products:
+                html_content += f"<p><strong>{item_code}: {products[0].item_name}</strong></p>"
+                for product in products:
+                    checked_attribute = "checked" if product.work_done == "Yes" else ""
+                    html_content += f"<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' {checked_attribute} disabled> &nbsp;&nbsp;&nbsp;&nbsp;{product.heading}<br>"
+                html_content += "</p>"
+        issue.checklist_tree = html_content
+
+
+        # Products -------------------------------------------------------------
+        products = frappe.get_all(
+            "Maintenance Visit Purpose",
+            filters = {"parent": issue.name},
+            fields = ['item_code', 'item_name', 'custom_image']
+        )
+        issue.products = products
+
+        # Spare Items -------------------------------------------------------------
+        spare_items = frappe.get_all(
+            "Spare Part",
+            filters = {"parent": issue.name},
+            fields = ['item_code', 'description', 'periodicity', 'uom']
+        )
+        issue.spare_items = spare_items
+
+        #symptoms and resolutions ------------------------------------------------------
+        symptoms = frappe.get_all(
+            "Maintenance Visit Symptoms",
+            filters = {"parent": issue.name},
+            fields = ['item_code', 'symptom_code', 'resolution', 'image']
+        )
+        symptoms_res = {}
+        html_content = ""
+        for symptom in symptoms:
+            key = symptom.item_code
+            if key not in symptoms_res:
+                symptoms_res[key] = []
+            symptoms_res[key].append(symptom)
+
+        for item_code, resolutions in symptoms_res.items():
+            if resolutions:
+                html_content += f"<p><strong>{item_code}:</strong></p>"
+                for resolution in resolutions:
+                    html_content += f"<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src='{resolution.image}' style='max-width: 100px;'> --> <strong>{resolution.symptom_code}</strong> --> {resolution.resolution}<br>"
+                html_content += "</p>"
+        issue.symptoms_res = html_content
+
+
     context["issues"] = issues
     
     date = datetime.now().date()
