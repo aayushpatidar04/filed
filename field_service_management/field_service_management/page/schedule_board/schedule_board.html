@@ -23,11 +23,7 @@
                 <strong class="text-danger">Maintenance Type:</strong> <span class="text-danger">{{ issue.issue_type
                     }}</span><br>
                 <span><strong>Assigned to:</strong> {{ issue._assign }}
-                    <!-- <a href="javascript:void(0)"
-                        class="text-muted btn btn-default icon-btn add-assignment-btn" data-toggle="modal"
-                        data-target="#formModal{{ issue.name }}"> <svg class="icon icon-sm">
-                            <use href="#icon-add"></use>
-                        </svg> </a> -->
+                    
                 </span>
             </div>
         </div>
@@ -79,7 +75,7 @@
                                         <p><strong>Creation Date:</strong> {{ issue.creation }}</p>
                                     </div>
                                     <div class="col-6">
-                                        <div id="map-{{ issue.name }}" style="width: 400px; height: 400px;"></div>
+                                        <div id="map-{{ issue.name }}" data-geo="{{ issue.geolocation }}" style="width: 400px; height: 400px;"></div>
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -159,7 +155,7 @@
                 </div>
             </div>
         </div>
-        <!-- <div class="modal fade" id="formModal{{ issue.name }}" tabindex="-1" role="dialog"
+        <div class="modal fade" id="formModal{{ issue.name }}" tabindex="-1" role="dialog"
             aria-labelledby="formModalLabel{{ issue.name }}" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
@@ -171,7 +167,7 @@
                     </div>
                     <div class="modal-body">
                         <form id="custom-form-{{ issue.name }}" class="custom-form" method="POST">
-                            <label for="code">Issue Code:</label>
+                            <label for="code">Maintenance Code:</label>
                             <input class="form-control code" type="text" name="code" value="{{ issue.name }}" required
                                 readonly><br><br>
 
@@ -199,7 +195,7 @@
                     </div>
                 </div>
             </div>
-        </div> -->
+        </div>
         {% endfor %}
         {% else %}
         <p>No issues found</p>

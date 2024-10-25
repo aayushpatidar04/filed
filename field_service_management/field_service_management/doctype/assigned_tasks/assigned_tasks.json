@@ -11,7 +11,8 @@
   "date",
   "stime",
   "etime",
-  "rescheduled"
+  "rescheduled",
+  "rescheduled_table"
  ],
  "fields": [
   {
@@ -19,7 +20,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Issue Code",
-   "options": "Issue",
+   "options": "Maintenance Visit",
    "reqd": 1
   },
   {
@@ -51,17 +52,22 @@
    "reqd": 1
   },
   {
-   "default": "NO",
+   "default": "0",
    "fieldname": "rescheduled",
-   "fieldtype": "Select",
+   "fieldtype": "Int",
    "label": "Rescheduled",
-   "options": "YES\nNO",
    "reqd": 1
+  },
+  {
+   "fieldname": "rescheduled_table",
+   "fieldtype": "Table",
+   "label": "Recheduled Table",
+   "options": "Rescheduled Visits"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-08 18:21:12.825984",
+ "modified": "2024-10-24 19:36:11.093941",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Assigned Tasks",

@@ -20,6 +20,11 @@ pages = [
     {"name": "schedule_board", "title": "Schedule Board", "path": "field_service_management.page.schedule_board.schedule_board"},
 ]
 
+override_whitelisted_methods = {
+    'api.login': 'field_service_management.api.login',
+    'api.get-maintenance': 'field_service_management.api.get_maintenance'
+}
+
 # include js, css files in header of desk.html
 # app_include_css = "/assets/field_service_management/css/field_service_management.css"
 # app_include_js = "/assets/field_service_management/js/field_service_management.js"

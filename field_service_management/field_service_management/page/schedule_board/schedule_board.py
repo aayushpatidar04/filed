@@ -23,6 +23,7 @@ def get_context():
                 "_assign",
                 "description",
                 "maintenance_description",
+                "customer_address"
             ],
         )
         technicians = frappe.get_all(
@@ -39,16 +40,18 @@ def get_context():
         )
         # Fetch issues based on the user's territory
         issues = frappe.get_all(
-            "Issue",
+            "Maintenance Visit",
             filters={"territory": territory, "_assign": ""},
             fields=[
                 "name",
                 "subject",
                 "status",
                 "creation",
-                "issue_type",
+                "maintenance_type",
                 "_assign",
                 "description",
+                "maintenance_description",
+                "customer_address"
             ],
         )
         technicians = frappe.get_all(
@@ -74,6 +77,12 @@ def get_context():
             except json.JSONDecodeError:
                 issue._assign = "No one assigned"
 
+        #geolocation --------------------------------------------------
+        geolocation = frappe.get_all('Address', filters = {'name' : issue.customer_address}, fields = ['geolocation'])
+        # geolocation = json.loads(geolocation[0].geolocation)
+        # print(geolocation)
+        # issue.geolocation = geolocation.features
+        issue.gelocation = geolocation
         # checklist tree ----------------------------------------------
         checklist = frappe.get_all(
             "Maintenance Visit Checklist",
@@ -180,6 +189,7 @@ def get_context():
             slot['not_available'] = not_available
             task_in_slot = None
             for task in tasks:
+                maintenance = frappe.get_doc('Maintenance Visit', task.issue_code)
                 if task.stime <= slot["time"] and task.etime > slot["time"]:
                     if task.flag == 0:  # Check if not already displayed
                         task_in_slot = task
@@ -205,15 +215,15 @@ def get_context():
                                 </button>
                             </div>
                             <div class="modal-body">
-                                <form id="custom-form-{task_in_slot['issue_code']}" class="custom-form" method="POST">
-                                    <label for="code">Issue Code:</label>
+                                <form id="custom2-form-{task_in_slot['issue_code']}" class="custom-form" method="POST">
+                                    <label for="code">Maintenance Visit Code:</label>
                                     <input class="form-control code" type="text" name="code" value="{task_in_slot['issue_code']}" required
                                         readonly><br><br>
 
                                     <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label><br>
                                     <select class="form-select technician" style="width:100%" name="technician[]" multiple="multiple" required>"""
                 for item in technicians:
-                    selected = 'selected' if item.email == tech.email else ''
+                    selected = 'selected' if item.email in maintenance._assign else ''
                     html_content += '<option value="{email}" {selected}>{email}</option>'.format(
                         email=item.email,
                         selected=selected
@@ -268,7 +278,6 @@ def save_form_data(form_data):
         etime = timedelta(hours=hours, minutes=minutes)
         hours, minutes = map(int, stime.split(":"))
         stime = timedelta(hours=hours, minutes=minutes)
-
         for tech in technicians:
             assigned_tasks = frappe.get_all(
                 "Assigned Tasks",
@@ -301,7 +310,7 @@ def save_form_data(form_data):
             new_doc.insert()
 
         # Optionally, you can update the Issue doctype as well
-        issue_doc = frappe.get_doc("Issue", code)
+        issue_doc = frappe.get_doc("Maintenance Visit", code)
         if issue_doc:
             existing_techs = json.loads(issue_doc._assign) if issue_doc._assign else []
             for tech in technicians:
@@ -310,7 +319,7 @@ def save_form_data(form_data):
             issue_doc._assign = json.dumps(existing_techs)
             frappe.db.sql(
                 """
-                UPDATE `tabIssue` SET `_assign` = %s WHERE name = %s
+                UPDATE `tabMaintenance Visit` SET `_assign` = %s WHERE name = %s
             """,
                 (json.dumps(existing_techs), code),
             )
@@ -340,8 +349,8 @@ def get_cords():
 
 @frappe.whitelist()
 def update_form_data(form_data):
-    # Parse the form_data from the request
-    pass
+    # # Parse the form_data from the request
+    # pass
     try:
         form_data = json.loads(form_data)
         technicians = form_data["technicians"]
@@ -349,10 +358,27 @@ def update_form_data(form_data):
         date = form_data["date"]
         etime = form_data["etime"]
         stime = form_data["stime"]
-        hours, minutes = map(int, etime.split(":"))
+        if(len(etime) > 5):
+            hours, minutes, seconds = map(int, etime.split(":"))
+        else:
+            hours, minutes = map(int, etime.split(":"))
         etime = timedelta(hours=hours, minutes=minutes)
-        hours, minutes = map(int, stime.split(":"))
+        if(len(stime) > 5):
+            hours, minutes, seconds = map(int, stime.split(":"))
+        else:
+            hours, minutes = map(int, stime.split(":"))
+
         stime = timedelta(hours=hours, minutes=minutes)
+
+
+        tasks = frappe.get_all("Assigned Tasks", filters={"issue_code": code}, fields=["name"])
+
+        if tasks:
+            for task in tasks:
+                frappe.delete_doc("Assigned Tasks", task.name, force=True)
+            frappe.db.commit()
+
+
 
         for tech in technicians:
             assigned_tasks = frappe.get_all(
@@ -386,7 +412,7 @@ def update_form_data(form_data):
             new_doc.insert()
 
         # Optionally, you can update the Issue doctype as well
-        issue_doc = frappe.get_doc("Issue", code)
+        issue_doc = frappe.get_doc("Maintenance Visit", code)
         if issue_doc:
             existing_techs = json.loads(issue_doc._assign) if issue_doc._assign else []
             for tech in technicians:
@@ -395,7 +421,7 @@ def update_form_data(form_data):
             issue_doc._assign = json.dumps(existing_techs)
             frappe.db.sql(
                 """
-                UPDATE `tabIssue` SET `_assign` = %s WHERE name = %s
+                UPDATE `tabMaintenance Visit` SET `_assign` = %s WHERE name = %s
             """,
                 (json.dumps(existing_techs), code),
             )

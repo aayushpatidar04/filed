@@ -40,7 +40,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				},
 				callback: function (response) {
 					if (response.message.success) {
-						alert("Issue assigned successfully!");
+						alert("Maintenance Visit scheduled successfully!");
 						window.location.reload();
 					} else {
 						alert(`Form submission failed!" ${response.message.message}`);
@@ -197,7 +197,6 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 			function openModal2(issueName, slot, tech, duration, na) {
 				const modalId = `taskModal${issueName}`; // Construct the modal ID
 				const modal = $(`#${modalId}`); // Select the modal using jQuery
-
 				if (modal.length) { // Check if the modal exists
 					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
 					const currentDate = new Date();
@@ -286,7 +285,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 		//update modal
 		$(document).on("click", ".update", function () {
 			const issueId = $(this).data("issue");
-			const form = $("#custom-form-" + issueId);
+			const form = $("#custom2-form-" + issueId);
 
 			// Collect form data
 			const formData = {
@@ -305,7 +304,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				},
 				callback: function (response) {
 					if (response.message.success) {
-						alert("Issue updated successfully!");
+						alert("Maintenance Visit updated successfully!");
 						window.location.reload();
 					} else {
 						alert(`Form submission failed!" ${response.message.message}`);
