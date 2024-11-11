@@ -150,6 +150,7 @@ def get_context(context=None):
     context["issues"] = issues
     
     date = datetime.now().date()
+    date = date + timedelta(days=1)
     time_slots = [
         {"label": "09:00 AM", "time": timedelta(hours=9)},
         {"label": "10:00 AM", "time": timedelta(hours=10)},

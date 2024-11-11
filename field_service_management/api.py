@@ -1,6 +1,7 @@
 import jwt
 import frappe
 from frappe import _
+import json
 
 @frappe.whitelist(allow_guest=True)
 def login(email, password):
@@ -66,36 +67,51 @@ def get_maintenance():
     
     maintenance_visits = frappe.get_all(
         "Maintenance Visit",
-        fields="*"
+        fields="name"
     )
+    # maintenance_visits = []
+    # for visit in maintenance_visits_:
+    #     maintenance_visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
+    #     maintenance_visits.append(maintenance_visit_doc.as_dict())
+    # return maintenance_visits
+
+
+    visits_with_details = []
+    for visit in maintenance_visits:
+        visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
+
+        #geolocation
+        delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
+        address = frappe.get_doc("Address", delivery_note.shipping_address_name)
+        geolocation = address.geolocation
+        geolocation = json.loads(geolocation)
+        visit_doc.geolocation = geolocation
+        
+        # Initialize a new dictionary for checktree_description
+        checktree_description = {}
+        for item in visit_doc.checktree_description:
+            item_code = item.item_code
+            if item_code not in checktree_description:
+                checktree_description[item_code] = []
+            checktree_description[item_code].append(item.as_dict())
+        
+        # Initialize a new dictionary for symptoms_table
+        symptoms_table = {}
+        for item in visit_doc.symptoms_table:
+            item_code = item.item_code
+            if item_code not in symptoms_table:
+                symptoms_table[item_code] = []
+            symptoms_table[item_code].append(item.as_dict())
+        
+        # Create a dictionary for the current visit, including the reformatted child tables
+        visit_data = visit_doc.as_dict()
+        visit_data['checktree_description'] = checktree_description
+        visit_data['symptoms_table'] = symptoms_table
+        
+        # Append the reformatted data to the final output
+        visits_with_details.append(visit_data)
     
-    # visits_with_details = []
-    # for visit in maintenance_visits:
-    #     visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
-        
-    #     # Initialize a new dictionary for checktree_description
-    #     checktree_description = {}
-    #     for item in visit_doc.checktree_description:
-    #         item_code = item.item_code
-    #         if item_code not in checktree_description:
-    #             checktree_description[item_code] = []
-    #         checktree_description[item_code].append(item.as_dict())
-        
-    #     # Initialize a new dictionary for symptoms_table
-    #     symptoms_table = {}
-    #     for item in visit_doc.symptoms_table:
-    #         item_code = item.item_code
-    #         if item_code not in symptoms_table:
-    #             symptoms_table[item_code] = []
-    #         symptoms_table[item_code].append(item.as_dict())
-        
-    #     # Create a dictionary for the current visit, including the reformatted child tables
-    #     visit_data = visit_doc.as_dict()
-    #     visit_data['checktree_description'] = checktree_description
-    #     visit_data['symptoms_table'] = symptoms_table
-        
-    #     # Append the reformatted data to the final output
-    #     visits_with_details.append(visit_data)
-    
-    # return visits_with_details
-    return maintenance_visits
+    return visits_with_details
+
+
+

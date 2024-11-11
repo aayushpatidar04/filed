@@ -1,16 +1,16 @@
-frappe.pages['schedule-board'].on_page_load = function (wrapper) {
+frappe.pages['schedule-board-yeste'].on_page_load = function(wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: 'Schedule Board',
+		title: 'Schedule Board Yesterday',
 		single_column: true
 	});
 
-	page.set_title("Schedule Board");
+	page.set_title("Schedule Board Yesterday");
 	frappe.call({
-		method: "field_service_management.field_service_management.page.schedule_board.schedule_board.get_context",
+		method: "field_service_management.field_service_management.page.schedule_board_yeste.schedule_board_yeste.get_context",
 		callback: function (r) {
 			if (r.message) {
-				$(frappe.render_template("schedule_board", r.message, r.issues)).appendTo(page.body);
+				$(frappe.render_template("schedule_board_yeste", r.message, r.issues)).appendTo(page.body);
 			} else {
 				console.log("No message returned from the server.");
 			}
@@ -198,6 +198,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				if (modal.length) { // Check if the modal exists
 					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
 					const currentDate = new Date();
+					currentDate.setDate(currentDate.getDate() - 1);
 					const year = currentDate.getFullYear();
 					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
 					const day = String(currentDate.getDate()).padStart(2, '0');
@@ -242,12 +243,14 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				if (modal.length) { // Check if the modal exists
 					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
 					const currentDate = new Date();
+					currentDate.setDate(currentDate.getDate() - 1);
 					const year = currentDate.getFullYear();
 					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
 					const day = String(currentDate.getDate()).padStart(2, '0');
 					modalInstance.show(); // Show the modal
 					const [hours, minutes, seconds] = slot.split(':').map(Number);
 					let startTime = new Date();
+					startTime.setDate(currentDate.getDate() - 1);
 					startTime.setHours(hours, minutes, seconds);
 					let etime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
 					if(hours < 10){
@@ -361,8 +364,4 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 		});
 
 	});
-
-
 }
-
-

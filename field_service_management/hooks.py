@@ -16,9 +16,16 @@ app_include_css = [
     "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
 ]
 
-pages = [
-    {"name": "schedule_board", "title": "Schedule Board", "path": "field_service_management.page.schedule_board.schedule_board"},
+app_pages = [
+    {"name": "/schedule_board", "title": "Schedule Board", "path": "field_service_management.page.schedule_board.schedule_board"},
+    {"name": "/schedule_board_yeste", "title": "Schedule Board Yesterday", "path": "field_service_management.page.schedule_board.schedule_board_yeste"},
 ]
+
+# website = {
+#     "routes": [
+#         {"from_route": "/schedule-board", "to_route": "field_service_management.field_service_management.page.schedule_board.schedule_board"}
+#     ]
+# }
 
 override_whitelisted_methods = {
     'api.login': 'field_service_management.api.login',
