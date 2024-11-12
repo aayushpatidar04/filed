@@ -18,7 +18,10 @@ app_include_css = [
 
 app_pages = [
     {"name": "/schedule_board", "title": "Schedule Board", "path": "field_service_management.page.schedule_board.schedule_board"},
-    {"name": "/schedule_board_yeste", "title": "Schedule Board Yesterday", "path": "field_service_management.page.schedule_board.schedule_board_yeste"},
+    {"name": "/schedule_board_yeste", "title": "Schedule Board Yesterday", "path": "field_service_management.page.schedule_board_yeste.schedule_board_yeste"},
+    {"name": "/schedule_tomorrow", "title": "Schedule Board Tomorrow", "path": "field_service_management.page.schedule_tomorrow.schedule_tomorrow"},
+    {"name": "/schedule_board_last7", "title": "Schedule Board: Last 7 Days", "path": "field_service_management.page.schedule_board_last7.schedule_board_last7"},
+    {"name": "/schedule_board_next7", "title": "Schedule Board: Next 7 Days", "path": "field_service_management.page.schedule_board_next7.schedule_board_next7"},
 ]
 
 # website = {
