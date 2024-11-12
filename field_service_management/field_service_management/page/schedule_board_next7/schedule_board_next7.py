@@ -81,7 +81,7 @@ def get_context(context=None):
         #geolocation --------------------------------------------------
         geolocation = frappe.get_all('Address', filters = {'name' : issue.customer_address}, fields = ['geolocation'])
         geolocation = json.loads(geolocation[0].geolocation)
-        
+        print(geolocation)
         issue.geolocation = json.dumps(geolocation['features']).replace('"', "'")
         # issue.geolocation = geolocation
         # checklist tree ----------------------------------------------
@@ -148,61 +148,47 @@ def get_context(context=None):
 
 
     context["issues"] = issues
-        
-
-    # Get today's date
+    
+    date = datetime.now().date()
     current_date = datetime.now().date()
 
     # Generate the last 7 days including today
-    dates = [(current_date - timedelta(days=i)) for i in range(7)]
-
-    # Define your time slots for each day
+    dates = [(current_date + timedelta(days=i)) for i in range(7)]
+    date = date + timedelta(days=1)
     time_slots = [
-        {"label": "09", "time": timedelta(hours=9)},
-        {"label": "10", "time": timedelta(hours=10)},
-        {"label": "11", "time": timedelta(hours=11)},
-        {"label": "12", "time": timedelta(hours=12)},
-        {"label": "01", "time": timedelta(hours=13)},
-        {"label": "02", "time": timedelta(hours=14)},
-        {"label": "03", "time": timedelta(hours=15)},
-        {"label": "04", "time": timedelta(hours=16)},
-        {"label": "05", "time": timedelta(hours=17)},
-        {"label": "06", "time": timedelta(hours=18)},
-        {"label": "07", "time": timedelta(hours=19)},
-        {"label": "08", "time": timedelta(hours=20)},
+        {"label": "09:00 AM", "time": timedelta(hours=9)},
+        {"label": "10:00 AM", "time": timedelta(hours=10)},
+        {"label": "11:00 AM", "time": timedelta(hours=11)},
+        {"label": "12:00 PM", "time": timedelta(hours=12)},
+        {"label": "01:00 PM", "time": timedelta(hours=13)},
+        {"label": "02:00 PM", "time": timedelta(hours=14)},
+        {"label": "03:00 PM", "time": timedelta(hours=15)},
+        {"label": "04:00 PM", "time": timedelta(hours=16)},
+        {"label": "05:00 PM", "time": timedelta(hours=17)},
+        {"label": "06:00 PM", "time": timedelta(hours=18)},
+        {"label": "07:00 PM", "time": timedelta(hours=19)},
+        {"label": "08:00 PM", "time": timedelta(hours=20)},
     ]
-
-    # Loop through each technician
     for tech in technicians:
         html_content = ""
-
-        # Fetch tasks for the past 7 days for each technician
-        all_tasks = frappe.get_all(
+        tasks = frappe.get_all(
             "Assigned Tasks",
-            filters={"technician": tech.email, "date": ["in", dates]},
-            fields=["issue_code", "date", "stime", "etime", "rescheduled"],
+            filters={"date": ["in", dates], "technician": tech.email},
+            fields=["issue_code", "stime", "etime", "rescheduled"],
             order_by="date, stime"
         )
-
-        # Organize tasks by date
         tasks_by_date = {date: [] for date in dates}
-        for task in all_tasks:
+        for task in tasks:
             time_diff = task.etime - task.stime
             task.duration_in_hours = time_diff.total_seconds() / 3600
             task.flag = 0
             tasks_by_date[task.date].append(task)
-
-        # Loop through each day for the past week
         for date in dates:
-            # html_content += f'<div class="day-header">{date.strftime("%A, %d %b %Y")}</div>'
-            tasks = tasks_by_date[date]
+            tss = tasks_by_date[date]
             count = 0
-            
-            # Loop through each time slot for the day
+
             for slot in time_slots:
                 not_available = []
-                
-                # Check availability for the current time slot
                 ts = frappe.get_all(
                     "Assigned Tasks",
                     filters={"date": date},
@@ -212,17 +198,14 @@ def get_context(context=None):
                     if t.stime <= slot["time"] and t.etime > slot["time"]:
                         not_available.append(t.technician)
                 slot['not_available'] = not_available
-
                 task_in_slot = None
-                for task in tasks:
+                for task in tss:
                     maintenance = frappe.get_doc('Maintenance Visit', task.issue_code)
                     if task.stime <= slot["time"] and task.etime > slot["time"]:
                         if task.flag == 0:  # Check if not already displayed
                             task_in_slot = task
                             task.flag = 1  # Mark as displayed
                             break
-                
-                # Generate HTML for the task if found
                 if task_in_slot:
                     html_content += f"""
                     <div style="width: {task_in_slot['duration_in_hours'] * 25}px; background-color: red; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
@@ -277,7 +260,6 @@ def get_context(context=None):
                     </div>""".format(issue_code=task_in_slot['issue_code'], date=date, stime=task_in_slot['stime'], etime=task_in_slot['etime'])
                     count += task_in_slot["duration_in_hours"] - 1
                 else:
-                    # Display an empty drop zone if no task is found
                     if count == 0:
                         html_content += f'<div style="width: 25px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                     elif count % 1 == 0.5:
@@ -286,7 +268,6 @@ def get_context(context=None):
                         count -= 0.5
                     else:
                         count -= 1
-
             tech.html_content = html_content
 
     context["dates"] = dates

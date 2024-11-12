@@ -1,5 +1,5 @@
 <div class="row">
-    <div class="col-2 scrollable-y">
+    <div class="col-3 scrollable-y">
         <h4 class="d-flex">
             <svg xmlns="http://www.w3.org/2000/svg" style="height: 25px; padding-top: 5px;" viewBox="0 0 448 512">
                 <path
@@ -79,7 +79,8 @@
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    <p><strong>Description: &nbsp;&nbsp;&nbsp;{{ issue.maintenance_description }}</strong> </p>
+                                    <p><strong>Description: &nbsp;&nbsp;&nbsp;{{ issue.maintenance_description
+                                            }}</strong> </p>
                                     <p>{{ issue.description }}</p>
                                 </div>
                             </div>
@@ -201,7 +202,7 @@
         {% endif %}
 
     </div>
-    <div class="col-10 scrollable-y">
+    <div class="col-9 scrollable-y">
         <div class="card">
             <div class="card-header d-flex" style="justify-content: space-between;">
                 <h5>Service Technician Calendar</h5>
@@ -223,9 +224,9 @@
                 <br>
                 <br>
                 <div class="row scrollable-x">
-                    <div class="col-3 mb-1 text-center"
+                    <div class="col-4 mb-1 text-center"
                         style="border-bottom: 1px solid #000; border-right: 1px solid #000;"><b>Users</b></div>
-                    <div class="col-9 mb-1 d-flex">
+                    <div class="col-8 mb-1 d-flex">
                         {% for date in dates %}
                         <div>
                             <div style="border-right: 1px solid #000; text-align: center;"><u><b>{{ date }}</b></u></div>
@@ -238,14 +239,14 @@
                         {% endfor %}
                     </div>
                     {% for item in technicians%}
-                    <div class="col-3 mb-1" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">
+                    <div class="col-4 mb-1" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">
                         <div class="d-flex">
                             <div><img src="{{ item.user_image }}"
                                     style="width: 50px; height: auto; border-radius: 50px;" alt=""></div>
                             <div>{{ item.full_name }}<br><small>{{ item.email }}</small></div>
                         </div>
                     </div>
-                    <div class="col-9 mb-1 d-flex" style="align-items: center;">
+                    <div class="col-8 mb-1 d-flex" style="align-items: center;">
                         <div class="d-flex">
                             {{ item.html_content }}
                         </div>

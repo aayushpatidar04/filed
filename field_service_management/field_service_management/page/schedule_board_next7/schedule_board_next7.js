@@ -1,16 +1,16 @@
-frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
+frappe.pages['schedule-board-next7'].on_page_load = function(wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: 'Schedule Board: Last 7 Days',
+		title: 'Schedule Board: Next 7 Days',
 		single_column: true
 	});
 
-	page.set_title("Schedule Board: Last 7 Days");
+	page.set_title("Schedule Board: Next 7 Days");
 	frappe.call({
-		method: "field_service_management.field_service_management.page.schedule_board_last7.schedule_board_last7.get_context",
+		method: "field_service_management.field_service_management.page.schedule_board_next7.schedule_board_next7.get_context",
 		callback: function (r) {
 			if (r.message) {
-				$(frappe.render_template("schedule_board_last7", r.message, r.issues)).appendTo(page.body);
+				$(frappe.render_template("schedule_board_next7", r.message, r.issues)).appendTo(page.body);
 			} else {
 				console.log("No message returned from the server.");
 			}
@@ -34,7 +34,7 @@ frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
 
 			// Make an API call to Frappe to save the data in your Doctype
 			frappe.call({
-				method: "field_service_management.field_service_management.page.schedule_board_last7.schedule_board_last_7.save_form_data",
+				method: "field_service_management.field_service_management.page.schedule_board_next7.schedule_board_next7.save_form_data",
 				args: {
 					form_data: formData
 				},
@@ -68,7 +68,7 @@ frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
 			}
 			
 			frappe.call({
-				method: "field_service_management.field_service_management.page.schedule_board_last7.schedule_board_last7	.get_cords",
+				method: "field_service_management.field_service_management.page.schedule_board_next7.schedule_board_next7.get_cords",
 				callback: function (r) {
 					if (r.message) {
 						const technicians = r.message;
@@ -198,6 +198,7 @@ frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
 				if (modal.length) { // Check if the modal exists
 					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
 					const currentDate = new Date();
+					currentDate.setDate(currentDate.getDate() - 1);
 					const year = currentDate.getFullYear();
 					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
 					const day = String(currentDate.getDate()).padStart(2, '0');
@@ -242,12 +243,14 @@ frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
 				if (modal.length) { // Check if the modal exists
 					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
 					const currentDate = new Date();
+					currentDate.setDate(currentDate.getDate() - 1);
 					const year = currentDate.getFullYear();
 					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
 					const day = String(currentDate.getDate()).padStart(2, '0');
 					modalInstance.show(); // Show the modal
 					const [hours, minutes, seconds] = slot.split(':').map(Number);
 					let startTime = new Date();
+					startTime.setDate(currentDate.getDate() - 1);
 					startTime.setHours(hours, minutes, seconds);
 					let etime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
 					if(hours < 10){
@@ -340,7 +343,7 @@ frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
 
 			// Make an API call to Frappe to save the data in your Doctype
 			frappe.call({
-				method: "field_service_management.field_service_management.page.schedule_board_last7.schedule_board_last7.update_form_data",
+				method: "field_service_management.field_service_management.page.schedule_board_next7.schedule_board_next7.update_form_data",
 				args: {
 					form_data: formData
 				},
@@ -362,4 +365,3 @@ frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
 
 	});
 }
-
