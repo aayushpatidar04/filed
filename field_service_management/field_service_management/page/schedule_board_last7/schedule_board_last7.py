@@ -81,7 +81,7 @@ def get_context(context=None):
         #geolocation --------------------------------------------------
         geolocation = frappe.get_all('Address', filters = {'name' : issue.customer_address}, fields = ['geolocation'])
         geolocation = json.loads(geolocation[0].geolocation)
-        
+        print(geolocation)
         issue.geolocation = json.dumps(geolocation['features']).replace('"', "'")
         # issue.geolocation = geolocation
         # checklist tree ----------------------------------------------
@@ -148,15 +148,13 @@ def get_context(context=None):
 
 
     context["issues"] = issues
-        
-
-    # Get today's date
+    
+    date = datetime.now().date()
     current_date = datetime.now().date()
 
     # Generate the last 7 days including today
     dates = [(current_date - timedelta(days=i)) for i in range(7)]
-
-    # Define your time slots for each day
+    date = date - timedelta(days=1)
     time_slots = [
         {"label": "09", "time": timedelta(hours=9)},
         {"label": "10", "time": timedelta(hours=10)},
@@ -171,122 +169,108 @@ def get_context(context=None):
         {"label": "07", "time": timedelta(hours=19)},
         {"label": "08", "time": timedelta(hours=20)},
     ]
-
-    # Loop through each technician
     for tech in technicians:
         html_content = ""
-
-        # Fetch tasks for the past 7 days for each technician
-        all_tasks = frappe.get_all(
+        tasks = frappe.get_all(
             "Assigned Tasks",
-            filters={"technician": tech.email, "date": ["in", dates]},
-            fields=["issue_code", "date", "stime", "etime", "rescheduled"],
+            filters={"date": ["in", dates], "technician": tech.email},
+            fields=["issue_code", "stime", "etime", "rescheduled", "date"],
             order_by="date, stime"
         )
-
-        # Organize tasks by date
         tasks_by_date = {date: [] for date in dates}
-        for task in all_tasks:
+        for task in tasks:
             time_diff = task.etime - task.stime
             task.duration_in_hours = time_diff.total_seconds() / 3600
             task.flag = 0
             tasks_by_date[task.date].append(task)
-
-        # Loop through each day for the past week
         for date in dates:
-            # html_content += f'<div class="day-header">{date.strftime("%A, %d %b %Y")}</div>'
-            tasks = tasks_by_date[date]
+            tss = tasks_by_date[date]
             count = 0
-            
-            # Loop through each time slot for the day
+
             for slot in time_slots:
-                not_available = []
-                
-                # Check availability for the current time slot
-                ts = frappe.get_all(
-                    "Assigned Tasks",
-                    filters={"date": date},
-                    fields=["issue_code", "stime", "etime", "rescheduled", "technician"],
-                )
-                for t in ts:
-                    if t.stime <= slot["time"] and t.etime > slot["time"]:
-                        not_available.append(t.technician)
-                slot['not_available'] = not_available
+                if slot['label'] == '01':
+                    html_content += f'<div style="width: 25px; border-right: 1px solid #000; color: white; background-color: red;" data-time="{slot["time"]}" data-tech="{tech.email}" class="px-1">Lunch Time</div>'
+                else:
+                    not_available = []
+                    ts = frappe.get_all(
+                        "Assigned Tasks",
+                        filters={"date": date},
+                        fields=["issue_code", "stime", "etime", "rescheduled", "technician"],
+                    )
+                    for t in ts:
+                        if t.stime <= slot["time"] and t.etime > slot["time"]:
+                            not_available.append(t.technician)
+                    slot['not_available'] = not_available
+                    task_in_slot = None
+                    for task in tss:
+                        maintenance = frappe.get_doc('Maintenance Visit', task.issue_code)
+                        if task.stime <= slot["time"] and task.etime > slot["time"]:
+                            if task.flag == 0:  # Check if not already displayed
+                                task_in_slot = task
+                                task.flag = 1  # Mark as displayed
+                                break
+                    if task_in_slot:
+                        html_content += f"""
+                        <div style="width: {task_in_slot['duration_in_hours'] * 25}px; background-color: red; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
+                            <a href="javascript:void(0)"
+                                class="text-white" data-toggle="modal"
+                                data-target="#taskModaltask-{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
+                        </div>
+                        """
+                        html_content += f"""
+                        <div class="modal fade" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
+                            aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="taskModalLabel{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="custom2-form-{task_in_slot['issue_code']}" class="custom-form" method="POST">
+                                            <label for="code">Maintenance Visit Code:</label>
+                                            <input class="form-control code" type="text" name="code" value="{task_in_slot['issue_code']}" required
+                                                readonly><br><br>
 
-                task_in_slot = None
-                for task in tasks:
-                    maintenance = frappe.get_doc('Maintenance Visit', task.issue_code)
-                    if task.stime <= slot["time"] and task.etime > slot["time"]:
-                        if task.flag == 0:  # Check if not already displayed
-                            task_in_slot = task
-                            task.flag = 1  # Mark as displayed
-                            break
-                
-                # Generate HTML for the task if found
-                if task_in_slot:
-                    html_content += f"""
-                    <div style="width: {task_in_slot['duration_in_hours'] * 25}px; background-color: red; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
-                        <a href="javascript:void(0)"
-                            class="text-white" data-toggle="modal"
-                            data-target="#taskModaltask-{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
-                    </div>
-                    """
-                    html_content += f"""
-                    <div class="modal fade" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
-                        aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="taskModalLabel{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <form id="custom2-form-{task_in_slot['issue_code']}" class="custom-form" method="POST">
-                                        <label for="code">Maintenance Visit Code:</label>
-                                        <input class="form-control code" type="text" name="code" value="{task_in_slot['issue_code']}" required
-                                            readonly><br><br>
+                                            <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label><br>
+                                            <select class="form-select technician" style="width:100%" name="technician[]" multiple="multiple" required>"""
+                        for item in technicians:
+                            selected = 'selected' if item.email in maintenance._assign else ''
+                            html_content += '<option value="{email}" {selected}>{email}</option>'.format(
+                                email=item.email,
+                                selected=selected
+                            )                                   
+                        html_content += """ </select><br><br>
 
-                                        <label for="technician">Select Co-Technicians (<span class="text-danger">only if more than one technician required</span>):</label><br>
-                                        <select class="form-select technician" style="width:100%" name="technician[]" multiple="multiple" required>"""
-                    for item in technicians:
-                        selected = 'selected' if item.email in maintenance._assign else ''
-                        html_content += '<option value="{email}" {selected}>{email}</option>'.format(
-                            email=item.email,
-                            selected=selected
-                        )                                   
-                    html_content += """ </select><br><br>
+                                            <label for="date">Date:</label>
+                                            <input class="form-control date" type="date" name="date" value="{date}" required><br><br>
 
-                                        <label for="date">Date:</label>
-                                        <input class="form-control date" type="date" name="date" value="{date}" required><br><br>
+                                            <label for="stime">Start Time</label>
+                                            <input class="form-control stime" type="time" name="stime" value="{stime}" required readonly><br><br>
+                                            
+                                            <label for="etime">End Time:</label>
+                                            <input class="form-control etime" type="time" name="etime" value="{etime}" required readonly>
+                                            <small><span class="text-danger etime-error"></span></small><br><br>
 
-                                        <label for="stime">Start Time</label>
-                                        <input class="form-control stime" type="time" name="stime" value="{stime}" required readonly><br><br>
-                                        
-                                        <label for="etime">End Time:</label>
-                                        <input class="form-control etime" type="time" name="etime" value="{etime}" required readonly>
-                                        <small><span class="text-danger etime-error"></span></small><br><br>
-
-                                        <button type="button" class="update btn btn-success"
-                                            data-issue="{issue_code}">Update</button>
-                                    </form>
+                                            <button type="button" class="update btn btn-success"
+                                                data-issue="{issue_code}">Update</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>""".format(issue_code=task_in_slot['issue_code'], date=date, stime=task_in_slot['stime'], etime=task_in_slot['etime'])
-                    count += task_in_slot["duration_in_hours"] - 1
-                else:
-                    # Display an empty drop zone if no task is found
-                    if count == 0:
-                        html_content += f'<div style="width: 25px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
-                    elif count % 1 == 0.5:
-                        slot['time'] += timedelta(minutes=30)
-                        html_content += f'<div style="width: 12.5px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
-                        count -= 0.5
+                        </div>""".format(issue_code=task_in_slot['issue_code'], date=date, stime=task_in_slot['stime'], etime=task_in_slot['etime'])
+                        count += task_in_slot["duration_in_hours"] - 1
                     else:
-                        count -= 1
-
+                        if count == 0:
+                            html_content += f'<div style="width: 25px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                        elif count % 1 == 0.5:
+                            slot['time'] += timedelta(minutes=30)
+                            html_content += f'<div style="width: 12.5px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                            count -= 0.5
+                        else:
+                            count -= 1
             tech.html_content = html_content
 
     context["dates"] = dates
@@ -462,3 +446,48 @@ def update_form_data(form_data):
         return {"success": "success"}
     except Exception as e:
         return {"error": "error", "message": str(e)}
+    
+
+@frappe.whitelist()
+def get_live_locations():
+
+    technicians = []
+    maintenance_visits = []
+    technician_records = frappe.db.sql("""
+        SELECT technician, latitude, longitude 
+        FROM `tabLive Location`
+        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+    """, as_dict=True)
+    for tech in technician_records:
+        technicians.append({
+            "technician": tech.technician,
+            "latitude": tech.latitude,
+            "longitude": tech.longitude
+        })
+    
+    maintenance_records = frappe.db.sql("""
+        SELECT name, address_html, delivery_address
+        FROM `tabMaintenance Visit`
+        WHERE completion_status != 'Fully Completed'
+    """, as_dict=True)
+    
+
+    for visit in maintenance_records:
+        visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
+        #geolocation
+        delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
+        address = frappe.get_doc("Address", delivery_note.shipping_address_name)
+        geolocation = address.geolocation
+        geolocation = json.loads(geolocation)
+
+        maintenance_visits.append({
+            "visit_id": visit.name,
+            "geolocation": geolocation,
+            "address": visit.address_html
+        })    
+    return {
+        "technicians": technicians,
+        "maintenance": maintenance_visits
+    }
+
+

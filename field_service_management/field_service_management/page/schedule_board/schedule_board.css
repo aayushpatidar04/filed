@@ -11721,10 +11721,10 @@ fieldset:disabled .btn {
 
 
 
-/* .modal-dialog {
-    max-width: 850px;
+.modal-dialog {
+    max-width: 100%;
     margin: 1.75rem auto
-} */
+}
 
 .scrollable-x {
     width: 100%;

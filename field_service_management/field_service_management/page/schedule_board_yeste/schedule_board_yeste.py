@@ -432,3 +432,48 @@ def update_form_data(form_data):
         return {"success": "success"}
     except Exception as e:
         return {"error": "error", "message": str(e)}
+    
+
+@frappe.whitelist()
+def get_live_locations():
+
+    technicians = []
+    maintenance_visits = []
+    technician_records = frappe.db.sql("""
+        SELECT technician, latitude, longitude 
+        FROM `tabLive Location`
+        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+    """, as_dict=True)
+    for tech in technician_records:
+        technicians.append({
+            "technician": tech.technician,
+            "latitude": tech.latitude,
+            "longitude": tech.longitude
+        })
+    
+    maintenance_records = frappe.db.sql("""
+        SELECT name, address_html, delivery_address
+        FROM `tabMaintenance Visit`
+        WHERE completion_status != 'Fully Completed'
+    """, as_dict=True)
+    
+
+    for visit in maintenance_records:
+        visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
+        #geolocation
+        delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
+        address = frappe.get_doc("Address", delivery_note.shipping_address_name)
+        geolocation = address.geolocation
+        geolocation = json.loads(geolocation)
+
+        maintenance_visits.append({
+            "visit_id": visit.name,
+            "geolocation": geolocation,
+            "address": visit.address_html
+        })    
+    return {
+        "technicians": technicians,
+        "maintenance": maintenance_visits
+    }
+
+

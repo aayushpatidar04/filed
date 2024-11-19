@@ -4,6 +4,16 @@ frappe.pages['schedule-board-yeste'].on_page_load = function(wrapper) {
 		title: 'Schedule Board Yesterday',
 		single_column: true
 	});
+	const pageKey = 'reload_schedule_board_yeste';
+
+    // Check if this page has been visited before
+    if (!localStorage.getItem(pageKey)) {
+        // If it's the first time, reload the page
+        localStorage.setItem(pageKey, 'visited'); // Mark the page as visited
+        window.location.reload(); // Reload the page
+        return; // Exit the function to avoid further execution
+    }
+	localStorage.removeItem(pageKey);
 
 	page.set_title("Schedule Board Yesterday");
 	frappe.call({
@@ -34,7 +44,7 @@ frappe.pages['schedule-board-yeste'].on_page_load = function(wrapper) {
 
 			// Make an API call to Frappe to save the data in your Doctype
 			frappe.call({
-				method: "field_service_management.field_service_management.page.schedule_board.schedule_board.save_form_data",
+				method: "field_service_management.field_service_management.page.schedule_board_yeste.schedule_board_yeste.save_form_data",
 				args: {
 					form_data: formData
 				},
@@ -53,93 +63,198 @@ frappe.pages['schedule-board-yeste'].on_page_load = function(wrapper) {
 			});
 		});
 
-		const mapInstances = {};
 		$(document).on('shown.bs.modal', '.issue-modal', function () {
 			const issueId = $(this).attr('id').replace('issueModal', '');
+			const mapContainerId = 'map-' + issueId;
 			const geoDiv = $('#map-' + issueId);
 
-    		const geoDataString = geoDiv.attr('data-geo').replace(/'/g, '"');
+			const geoDataString = geoDiv.attr('data-geo').replace(/'/g, '"');
 			const geoData = JSON.parse(geoDataString);
 
-			
-			if (mapInstances[issueId]) {
-				mapInstances[issueId].remove();
-				delete mapInstances[issueId];
+			if (!geoDiv.length) {
+				console.error('Map container not found:', mapContainerId);
+				return;
 			}
-			
+
+			if (geoDiv.data('mapInstance')) {
+				geoDiv.data('mapInstance').remove();
+				geoDiv.removeData('mapInstance'); // Clear the stored map instance
+			}
+
+			const map = L.map(mapContainerId).setView([0, 0], 13);
+			geoDiv.data('mapInstance', map);
+
 			frappe.call({
-				method: "field_service_management.field_service_management.page.schedule_board.schedule_board.get_cords",
+				method: "field_service_management.field_service_management.page.schedule_board_yeste.schedule_board_yeste.get_cords",
 				callback: function (r) {
 					if (r.message) {
 						const technicians = r.message;
-						
-						const mapContainerId = 'map-' + issueId;
-
 
 						// Check if the map container exists
-						if ($('#' + mapContainerId).length) {
-							let customerLat = null;
-							let customerLng = null;
-							const map = L.map(mapContainerId).setView([0, 0], 13);
-							geoData.forEach(
-								feature => {
-									const { properties, geometry } = feature;
-									const [lng, lat] = geometry.coordinates;
-								
-									if (Object.keys(properties).length === 0) {
-										customerLat = lat;
-										customerLng = lng;
+						let customerLat = null;
+						let customerLng = null;
 
-									} else if (properties.point_type === 'circle' && properties.radius) {
-										// If properties contains a 'circle' type, handle it as a circle
-										L.circle([lat, lng], {
-											radius: properties.radius,
-											color: 'blue',
-											fillColor: '#30a0ff',
-											fillOpacity: 0.3
-										}).addTo(map)
-										//   .bindPopup(`<b>Circle with radius: ${properties.radius} meters</b>`);
-										  .bindPopup(`<b>Circle with radius: 300 meters</b>`);
-									}
-								}
-							)
-							if (customerLat !== null && customerLng !== null) {
-								map.setView([customerLat, customerLng], 13); // Adjust zoom level as needed
-								// Optionally, you can add a marker for the customer's location
-								L.marker([customerLat, customerLng]).addTo(map)
-								  .bindPopup('<b>Customer Location</b>').openPopup();
-							} else {
-								console.error('Customer location not found in geoData.');
+						// Add shapes/markers from geoData
+						geoData.forEach(feature => {
+							const { properties, geometry } = feature;
+							const [lng, lat] = geometry.coordinates;
+
+							if (Object.keys(properties).length === 0) {
+								customerLat = lat;
+								customerLng = lng;
+							} else if (properties.point_type === 'circle' && properties.radius) {
+								L.circle([lat, lng], {
+									radius: properties.radius,
+									color: 'blue',
+									fillColor: '#30a0ff',
+									fillOpacity: 0.3
+								}).addTo(map).bindPopup(`<b>Circle with radius: 300 meters</b>`);
 							}
-							// Add OpenStreetMap tiles
-							L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-								maxZoom: 19
-							}).addTo(map);
+						});
 
-							// Add customer marker
+						// Center the map on the customer's location
+						if (customerLat !== null && customerLng !== null) {
+							map.setView([customerLat, customerLng], 13);
 							L.marker([customerLat, customerLng]).addTo(map)
 								.bindPopup('<b>Customer Location</b>').openPopup();
-
-							const greenIcon = L.icon({
-								iconUrl: '/private/files/green-marker51773a.png', // Replace with a link to a green icon image
-								iconSize: [25, 41], // Size of the icon
-								iconAnchor: [12, 41], // Point of the icon which will correspond to marker's location
-								popupAnchor: [1, -34], // Point from which the popup should open relative to the iconAnchor
-							});
-
-							// Add technician markers (assuming technicians is an available variable)
-							technicians.forEach(function (tech) {
-								L.marker([tech.latitude, tech.longitude], { icon: greenIcon }).addTo(map)
-									.bindPopup('<b>Technician: ' + tech.technician + '</b>');
-							});
-						} else {
-							console.error('Map container not found:', mapContainerId);
 						}
+
+						// Add OpenStreetMap tiles
+						L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+							maxZoom: 19,
+							attribution: '&copy; OpenStreetMap contributors'
+						}).addTo(map);
+
+						// Add technician markers
+						const greenIcon = L.icon({
+							iconUrl: '/private/files/green-marker51773a.png',
+							iconSize: [25, 41],
+							iconAnchor: [12, 41],
+							popupAnchor: [1, -34]
+						});
+
+						technicians.forEach(tech => {
+							L.marker([tech.latitude, tech.longitude], { icon: greenIcon }).addTo(map)
+								.bindPopup('<b>Technician: ' + tech.technician + '</b>');
+						});
 					} else {
 						console.log("No cords returned from the server.");
 					}
 				}
 			});
+		});
+
+
+		let liveMap = null;
+		let updateInterval = null;
+
+		$(document).on('shown.bs.modal', '#mapModal', function () {
+			const mapContainerId = 'live-map-container';
+			const mapDiv = $('#' + mapContainerId);
+
+			// Remove existing map instance if any (to prevent re-initialization error)
+			if (liveMap) {
+				liveMap.remove();
+				liveMap = null;
+			}
+
+			// Initialize the map
+			liveMap = L.map(mapContainerId).setView([0, 0], 5); // Initial view centered on India
+			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				maxZoom: 19,
+				attribution: '&copy; OpenStreetMap contributors'
+			}).addTo(liveMap);
+
+			// Define custom icons for technicians and maintenance visits
+			const technicianIcon = L.icon({
+				iconUrl: '/private/files/green-marker51773a.png',
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34]
+			});
+
+			// Function to fetch and display locations
+			function fetchAndDisplayLocations() {
+				frappe.call({
+					method: "field_service_management.field_service_management.page.schedule_board_yeste.schedule_board_yeste.get_live_locations",
+					callback: function (r) {
+						if (r.message) {
+							const { technicians, maintenance } = r.message;
+
+							// Clear existing markers before adding new ones
+							liveMap.eachLayer(function (layer) {
+								if (layer instanceof L.Marker) {
+									liveMap.removeLayer(layer);
+								}
+							});
+
+							// Add technician markers
+							technicians.forEach(tech => {
+								L.marker([tech.latitude, tech.longitude], { icon: technicianIcon })
+									.addTo(liveMap)
+									.bindPopup(`<b>Technician: ${tech.technician}</b><br>Lat: ${tech.latitude}, Lng: ${tech.longitude}`);
+							});
+
+							// Add maintenance visit markers
+							maintenance.forEach(visit => {
+								let customerLat = null;
+								let customerLng = null;
+								if (visit.geolocation && visit.geolocation.features && Array.isArray(visit.geolocation.features)) {
+									visit.geolocation.features.forEach(function(feature) {
+										const { properties, geometry } = feature;
+										
+										// Extract latitude and longitude from coordinates
+										const [lng, lat] = geometry.coordinates;
+								
+										// Check if properties are empty
+										if (Object.keys(properties).length === 0) {
+											customerLat = lat;
+											customerLng = lng;
+										} else if (properties.point_type === 'circle' && properties.radius) {
+											// Handle case for circle type with radius
+											L.circle([lat, lng], {
+												radius: properties.radius,
+												color: 'blue',
+												fillColor: '#30a0ff',
+												fillOpacity: 0.3
+											}).addTo(map).bindPopup(`<b>Circle with radius: ${properties.radius} meters</b>`);
+										}
+									});
+								} else {
+									console.error('Geolocation data is not in the correct format or missing');
+								}
+								
+								if (customerLat !== null && customerLng !== null) {
+									liveMap.setView([customerLat, customerLng], 13);
+									L.marker([customerLat, customerLng])
+										.addTo(liveMap)
+										.bindPopup(`<b>Maintenance Visit</b><br>${visit.name}<br>${visit.address}`);
+								}
+							});
+						} else {
+							console.log("No data returned from the server.");
+						}
+					}
+				});
+			}
+
+			// Fetch and display the initial set of locations
+			fetchAndDisplayLocations();
+
+			// Set an interval to update locations periodically (every 30 seconds)
+			updateInterval = setInterval(fetchAndDisplayLocations, 30000);
+		});
+
+		// Clean up when the modal is hidden
+		$(document).on('hidden.bs.modal', '#liveLocationModal', function () {
+			if (liveMap) {
+				liveMap.remove();
+				liveMap = null;
+			}
+			if (updateInterval) {
+				clearInterval(updateInterval);
+				updateInterval = null;
+			}
 		});
 
 		setTimeout(function () {
@@ -343,7 +458,7 @@ frappe.pages['schedule-board-yeste'].on_page_load = function(wrapper) {
 
 			// Make an API call to Frappe to save the data in your Doctype
 			frappe.call({
-				method: "field_service_management.field_service_management.page.schedule_board.schedule_board.update_form_data",
+				method: "field_service_management.field_service_management.page.schedule_board_yeste.schedule_board_yeste.update_form_data",
 				args: {
 					form_data: formData
 				},

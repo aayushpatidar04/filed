@@ -156,25 +156,25 @@ def get_context(context=None):
     dates = [(current_date + timedelta(days=i)) for i in range(7)]
     date = date + timedelta(days=1)
     time_slots = [
-        {"label": "09:00 AM", "time": timedelta(hours=9)},
-        {"label": "10:00 AM", "time": timedelta(hours=10)},
-        {"label": "11:00 AM", "time": timedelta(hours=11)},
-        {"label": "12:00 PM", "time": timedelta(hours=12)},
-        {"label": "01:00 PM", "time": timedelta(hours=13)},
-        {"label": "02:00 PM", "time": timedelta(hours=14)},
-        {"label": "03:00 PM", "time": timedelta(hours=15)},
-        {"label": "04:00 PM", "time": timedelta(hours=16)},
-        {"label": "05:00 PM", "time": timedelta(hours=17)},
-        {"label": "06:00 PM", "time": timedelta(hours=18)},
-        {"label": "07:00 PM", "time": timedelta(hours=19)},
-        {"label": "08:00 PM", "time": timedelta(hours=20)},
+        {"label": "09", "time": timedelta(hours=9)},
+        {"label": "10", "time": timedelta(hours=10)},
+        {"label": "11", "time": timedelta(hours=11)},
+        {"label": "12", "time": timedelta(hours=12)},
+        {"label": "01", "time": timedelta(hours=13)},
+        {"label": "02", "time": timedelta(hours=14)},
+        {"label": "03", "time": timedelta(hours=15)},
+        {"label": "04", "time": timedelta(hours=16)},
+        {"label": "05", "time": timedelta(hours=17)},
+        {"label": "06", "time": timedelta(hours=18)},
+        {"label": "07", "time": timedelta(hours=19)},
+        {"label": "08", "time": timedelta(hours=20)},
     ]
     for tech in technicians:
         html_content = ""
         tasks = frappe.get_all(
             "Assigned Tasks",
             filters={"date": ["in", dates], "technician": tech.email},
-            fields=["issue_code", "stime", "etime", "rescheduled"],
+            fields=["issue_code", "stime", "etime", "rescheduled", "date"],
             order_by="date, stime"
         )
         tasks_by_date = {date: [] for date in dates}
@@ -261,10 +261,10 @@ def get_context(context=None):
                     count += task_in_slot["duration_in_hours"] - 1
                 else:
                     if count == 0:
-                        html_content += f'<div style="width: 25px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                        html_content += f'<div style="width: 25px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                     elif count % 1 == 0.5:
                         slot['time'] += timedelta(minutes=30)
-                        html_content += f'<div style="width: 12.5px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                        html_content += f'<div style="width: 12.5px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                         count -= 0.5
                     else:
                         count -= 1
@@ -443,3 +443,47 @@ def update_form_data(form_data):
         return {"success": "success"}
     except Exception as e:
         return {"error": "error", "message": str(e)}
+    
+@frappe.whitelist()
+def get_live_locations():
+
+    technicians = []
+    maintenance_visits = []
+    technician_records = frappe.db.sql("""
+        SELECT technician, latitude, longitude 
+        FROM `tabLive Location`
+        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+    """, as_dict=True)
+    for tech in technician_records:
+        technicians.append({
+            "technician": tech.technician,
+            "latitude": tech.latitude,
+            "longitude": tech.longitude
+        })
+    
+    maintenance_records = frappe.db.sql("""
+        SELECT name, address_html, delivery_address
+        FROM `tabMaintenance Visit`
+        WHERE completion_status != 'Fully Completed'
+    """, as_dict=True)
+    
+
+    for visit in maintenance_records:
+        visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
+        #geolocation
+        delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
+        address = frappe.get_doc("Address", delivery_note.shipping_address_name)
+        geolocation = address.geolocation
+        geolocation = json.loads(geolocation)
+
+        maintenance_visits.append({
+            "visit_id": visit.name,
+            "geolocation": geolocation,
+            "address": visit.address_html
+        })    
+    return {
+        "technicians": technicians,
+        "maintenance": maintenance_visits
+    }
+
+

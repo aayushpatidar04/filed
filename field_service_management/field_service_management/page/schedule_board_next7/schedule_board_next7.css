@@ -11745,8 +11745,8 @@ fieldset:disabled .btn {
     display: flex;
 }
 
-.col-3,
-.col-9 {
+.col-2,
+.col-10 {
     border: 1px solid #ccc;
     padding: 10px;
 }

@@ -32,7 +32,17 @@ app_pages = [
 
 override_whitelisted_methods = {
     'api.login': 'field_service_management.api.login',
-    'api.get-maintenance': 'field_service_management.api.get_maintenance'
+    'api.get_maintenance': 'field_service_management.api.get_maintenance',
+    'api.get_maintenance_': 'field_service_management.api.get_maintenance_',
+    'api.update_spare_item': 'field_service_management.api.update_spare_item',
+    'api.start_maintenance_visit': 'field_service_management.api.start_maintenance_visit',
+    'api.check_300m_radius': 'field_service_management.api.check_300m_radius',
+    'api.update_punch_in_out': 'field_service_management.api.update_punch_in_out',
+    'api.update_checktree': 'field_service_management.api.update_checktree',
+    'api.live_location': 'field_service_management.api.live_location',
+    'api.attachment': 'field_service_management.api.attachment',
+    'api.technician_notes': 'field_service_management.api.technician_notes',
+    'api.add_symptom_requests': 'field_service_management.api.add_symptom_requests',
 }
 
 # include js, css files in header of desk.html
