@@ -183,7 +183,7 @@ def start_maintenance_visit(name):
             "doctype": "Visit Start Maintenance",
             "parent": name,
             "parenttype": "Maintenance Visit",
-            "parentfield": "visit_start_record",
+            "parentfield": "visit_start_records",
             "maintenance_visit": name,
             "technician": technician_user,
             "visit_start_at": now_datetime(),
@@ -613,8 +613,37 @@ def add_symptom_requests(maintenance_visit, item_code, symptoms=None):
 
     return {"status": "success", "message": "Symptom requests added successfully."}
 
+@frappe.whitelist(allow_guest=True)
+def add_reschedule_requests(maintenance_visit, type, reason, date, hours):
+    authorization_header = frappe.get_request_header("Authorization")
+    if not authorization_header:
+        return { "status": "error", "message": "Missing Authorization header"}
+    api_key = frappe.get_request_header("Authorization").split(" ")[1].split(":")[0]
+    # Find the user associated with the API key
+    user = frappe.db.get_value("User", {"api_key": api_key}, "name")
+    
+    if not user:
+        return {"status": "failed", "message": "Invalid API key"}
+    # Get Maintenance Visit document
+    maintenance = frappe.get_doc("Maintenance Visit", maintenance_visit)
+    if not maintenance:
+        return {"status": "Failed", "message": f"Maintenance Visit '{maintenance_visit}' not found."}
 
-
+    reschedule_request = frappe.get_doc({
+        "doctype": "Reschedule Requests",
+        "type": type,
+        "reason": reason,
+        "technician": user,
+        "date": date,
+        "hours": hours,
+        "maintenance_visit": maintenance_visit,
+        "parent": maintenance_visit,
+        "parenttype": "Maintenance Visit",
+        "parentfield": "reschedule_requests",
+    })
+    reschedule_request.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return {"status": "success", "message": "Reschedule Request submitted successfully!"}
 
 
 

@@ -10,6 +10,8 @@ def get_context(context=None):
     context = context or {}
     user = frappe.session.user
 
+    issues = []
+    technicians = []
         
     if user == "Administrator":
         issues = frappe.get_all(
@@ -24,7 +26,8 @@ def get_context(context=None):
                 "_assign",
                 "description",
                 "maintenance_description",
-                "customer_address"
+                "customer_address",
+                "completion_status"
             ],
         )
         technicians = frappe.get_all(
@@ -52,7 +55,8 @@ def get_context(context=None):
                 "_assign",
                 "description",
                 "maintenance_description",
-                "customer_address"
+                "customer_address",
+                "completion_status"
             ],
         )
         technicians = frappe.get_all(
@@ -176,8 +180,9 @@ def get_context(context=None):
             task.flag = 0
         tech.tasks = tasks
         count = 0
+        total_hours = 0
         for slot in time_slots:
-            if slot['label'] == '01:00 PM':
+            if slot['label'] == '12:00 PM':
                 html_content += f'<div style="width: 100px; border-right: 1px solid #000; color: white; background-color: red;" data-time="{slot["time"]}" data-tech="{tech.email}" class="px-1">Lunch Time</div>'
             else:
                 not_available = []
@@ -199,6 +204,7 @@ def get_context(context=None):
                             task.flag = 1  # Mark as displayed
                             break
                 if task_in_slot:
+                    total_hours += task_in_slot['duration_in_hours']
                     html_content += f"""
                     <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: red; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
                         <a href="javascript:void(0)"
@@ -261,6 +267,8 @@ def get_context(context=None):
                     else:
                         count -= 1
         tech.html_content = html_content
+        percent_occupied = round((total_hours) / 11 * 100, 2)
+        tech.total_hours = percent_occupied
     context["technicians"] = technicians    
     context["slots"] = time_slots
     context["message"] = "Welcome to your schedule board!"
@@ -320,11 +328,12 @@ def save_form_data(form_data):
                 if tech not in existing_techs:
                     existing_techs.append(tech)
             issue_doc._assign = json.dumps(existing_techs)
+            issue_doc.visit_count += 1
             frappe.db.sql(
                 """
-                UPDATE `tabMaintenance Visit` SET `_assign` = %s WHERE name = %s
+                UPDATE `tabMaintenance Visit` SET `_assign` = %s, `maintenance_type` = %s, `visit_count` = `visit_count` + 1 WHERE name = %s
             """,
-                (json.dumps(existing_techs), code),
+                (json.dumps(existing_techs), 'Scheduled', code),
             )
 
             frappe.db.commit()
@@ -345,7 +354,7 @@ def get_cords():
     )
     """
     technicians = frappe.db.sql(query, as_dict=True)
-    
+    print(technicians)
     return technicians
 
 @frappe.whitelist()
@@ -354,10 +363,14 @@ def get_live_locations():
     technicians = []
     maintenance_visits = []
     technician_records = frappe.db.sql("""
-        SELECT technician, latitude, longitude 
-        FROM `tabLive Location`
-        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-    """, as_dict=True)
+        SELECT technician, latitude, longitude, time 
+        FROM `tabLive Location` 
+        WHERE (technician, time) IN (
+            SELECT technician, MAX(time) 
+            FROM `tabLive Location` 
+            GROUP BY technician
+        )
+        """, as_dict=True)
     for tech in technician_records:
         technicians.append({
             "technician": tech.technician,
@@ -459,17 +472,26 @@ def update_form_data(form_data):
         # Optionally, you can update the Issue doctype as well
         issue_doc = frappe.get_doc("Maintenance Visit", code)
         if issue_doc:
-            existing_techs = json.loads(issue_doc._assign) if issue_doc._assign else []
+            existing_techs = []
             for tech in technicians:
                 if tech not in existing_techs:
                     existing_techs.append(tech)
-            issue_doc._assign = json.dumps(existing_techs)
-            frappe.db.sql(
+            if existing_techs:
+                issue_doc._assign = json.dumps(existing_techs)
+                frappe.db.sql(
+                    """
+                    UPDATE `tabMaintenance Visit` SET `_assign` = %s WHERE name = %s
+                    """,
+                    (json.dumps(existing_techs), code),
+                )
+            else:
+                issue_doc._assign = ""
+                frappe.db.sql(
                 """
-                UPDATE `tabMaintenance Visit` SET `_assign` = %s WHERE name = %s
-            """,
-                (json.dumps(existing_techs), code),
-            )
+                    UPDATE `tabMaintenance Visit` SET `_assign` = %s, `maintenance_type` = %s, `visit_count` = `visit_count` - 1 WHERE name = %s
+                """,
+                    ("", 'Unscheduled', code),
+                )
 
             frappe.db.commit()
         return {"success": "success"}

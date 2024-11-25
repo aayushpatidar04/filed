@@ -105,3 +105,29 @@ def site_survey(name):
         fields = ["heading", "content"]
     )
     return childs
+
+
+@frappe.whitelist()
+def update_maintenance_visit(maintenance_visit, name):
+    if not maintenance_visit:
+        return
+    try:
+        frappe.db.sql("""
+            UPDATE `tabMaintenance Visit`
+            SET _assign = %s, maintenance_type = %s
+            WHERE name = %s
+        """, ('', 'Rescheduled', maintenance_visit))  # Empty _assign and set maintenance_type to Rescheduled
+        
+        # Commit the transaction to ensure changes are saved
+        frappe.db.commit()
+
+        print("Maintenance Visit updated successfully.")
+    except Exception as e:
+        print(f"Error updating Maintenance Visit: {e}")
+
+    reschedule_doc = frappe.get_doc("Reschedule Requests", name)
+    reschedule_doc.approval = 'Approved'
+    reschedule_doc.approval_status = '1'
+    reschedule_doc.save(ignore_permissions=True)
+
+    return {"success": True}

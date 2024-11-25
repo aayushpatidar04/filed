@@ -5,6 +5,11 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 		single_column: true
 	});
 
+	let script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js";
+    document.head.appendChild(script);
+
+
 	const pageKey = 'reload_schedule_board';
 
     // Check if this page has been visited before
@@ -27,6 +32,8 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 			}
 		}
 	});
+
+	
 	$(document).ready(function () {
 
 
@@ -230,7 +237,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 									liveMap.setView([customerLat, customerLng], 13);
 									L.marker([customerLat, customerLng])
 										.addTo(liveMap)
-										.bindPopup(`<b>Maintenance Visit</b><br>${visit.name}<br>${visit.address}`);
+										.bindPopup(`<b>Maintenance Visit</b><br>${visit.visit_id}<br>${visit.address}`);
 								}
 							});
 						} else {
@@ -324,10 +331,11 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					if (hours < 10) {
 						const stime_val = '0' + slot.substring(0, 4)
 						modal.find('.stime').val(stime_val);
+						modal.find('.etime').data('stime', slot.substring(0, 4));
 					} else {
 						modal.find('.stime').val(slot.substring(0, 5));
+						modal.find('.etime').data('stime', slot.substring(0, 5));
 					}
-					modal.find('.etime').data('stime', slot.substring(0, 5));
 					modal.find('.technician').val(tech).change();
 					if (typeof na === 'string') {
 						try {
@@ -371,11 +379,12 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					if (hours < 10) {
 						const stime_val = '0' + slot.substring(0, 4)
 						modal.find('.stime').val(stime_val);
+						modal.find('.etime').data('stime', slot.substring(0, 4));
 					} else {
 						modal.find('.stime').val(slot.substring(0, 5));
+						modal.find('.etime').data('stime', slot.substring(0, 5));
 					}
 					modal.find('.etime').val(etime.toTimeString().substring(0, 5));
-					modal.find('.etime').data('stime', slot.substring(0, 5));
 					modal.find('.technician').val(tech).change();
 					if (typeof na === 'string') {
 						try {
@@ -410,14 +419,14 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				$(this).on('change', function (e) {
 					setTimeout(() => {
 						const timeValue = $(this).val();
-						const stime = $(this).data('stime');
+						const stime = $(this).data('stime').split(':');
 						if (timeValue) {
 							const [hours, minutes] = timeValue.split(':').map(Number);
 							if (minutes % 30 !== 0) {
 								alert('Please select a time that is a multiple of 30 minutes.');
 								$(this).val(''); // Clear the input
 								$(this).focus(); // Focus back on the input
-							} else if (stime >= timeValue) {
+							}else if(stime[0] >= hours){
 								alert('Please select a time that is greater than start time.');
 								$(this).val(''); // Clear the input
 								$(this).focus();
