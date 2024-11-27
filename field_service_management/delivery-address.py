@@ -53,11 +53,11 @@ import json
 
 
 @frappe.whitelist()
-def get_delivery_notes(doctype, txt, searchfield, start, page_len, filters):
+def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
     # Convert filters from JSON string to a dictionary
     filters = json.loads(filters) if isinstance(filters, str) else filters
     
-    customer = filters.get("customer")  # Now it can safely use .get()
+    # customer = filters.get("customer")  # Now it can safely use .get()
     
     if customer:
         # Fetch unique shipping addresses
