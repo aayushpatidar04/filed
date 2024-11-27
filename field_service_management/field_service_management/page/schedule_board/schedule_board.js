@@ -48,7 +48,6 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				stime: form.find(".stime").val(),
 				etime: form.find(".etime").val()
 			};
-			console.log(formData);
 
 			// Make an API call to Frappe to save the data in your Doctype
 			frappe.call({
