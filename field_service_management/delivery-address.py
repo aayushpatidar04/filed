@@ -1,6 +1,6 @@
 
 import frappe
-
+import json
 # In your custom app's file, for example: field_service/doctype/your_doctype/your_doctype.py
 
 # @frappe.whitelist()
@@ -53,7 +53,12 @@ import frappe
 
 
 @frappe.whitelist()
-def get_delivery_notes(customer):
+def get_delivery_notes(doctype, txt, searchfield, start, page_len, filters):
+    # Convert filters from JSON string to a dictionary
+    filters = json.loads(filters) if isinstance(filters, str) else filters
+    
+    customer = filters.get("customer")  # Now it can safely use .get()
+    
     if customer:
         # Fetch unique shipping addresses
         addresses = frappe.db.get_all(
@@ -62,7 +67,9 @@ def get_delivery_notes(customer):
             fields=["DISTINCT shipping_address"],
         )
         return [(address.shipping_address,) for address in addresses if address.shipping_address]
-   
+    
+
+
 @frappe.whitelist()
 def get_items_for_address(doctype, txt, searchfield, start, page_len, filters):
 
