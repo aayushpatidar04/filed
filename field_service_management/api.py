@@ -90,6 +90,22 @@ def get_maintenance():
     for visit in maintenance_visits:
         visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
 
+        #start-end time
+        assigned_task = frappe.get_all(
+            "Assigned Tasks",
+            filters={
+                "technician": user, "status": "Pending", "issue_code": visit.name
+            },
+            limit_page_length=1,
+            order_by='creation desc',
+            fields=['*']
+        )
+        visit_doc.update({
+            "mntc_time": assigned_task[0].stime if assigned_task else "",
+            "mntc_date": assigned_task[0].etime if assigned_task else "",
+        })
+
+
         #geolocation
         delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
         address = frappe.get_doc("Address", delivery_note.shipping_address_name)

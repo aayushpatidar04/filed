@@ -8,6 +8,7 @@ frappe.pages['schedule-board-last7'].on_page_load = function(wrapper) {
     script.src = "https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js";
     document.head.appendChild(script);
 
+
 	const pageKey = 'reload_schedule_board_last7';
 
     // Check if this page has been visited before

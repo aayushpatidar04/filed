@@ -11,6 +11,9 @@ def get_context(context=None):
     user = frappe.session.user
 
         
+    issues = []
+    technicians = []
+    
     if user == "Administrator":
         issues = frappe.get_all(
             "Maintenance Visit",
@@ -223,7 +226,7 @@ def get_context(context=None):
                         html_content += f"""
                         <div class="modal fade" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
                             aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
-                            <div class="modal-dialog" role="document">
+                            <div class="modal-dialog" role="document" style="max-width: 100%; margin: 1.75rem auto">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="taskModalLabel{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</h5>

@@ -10,7 +10,9 @@ def get_context(context=None):
     context = context or {}
     user = frappe.session.user
 
-        
+    issues = []
+    technicians = []
+     
     if user == "Administrator":
         issues = frappe.get_all(
             "Maintenance Visit",
@@ -207,7 +209,7 @@ def get_context(context=None):
                 if task_in_slot:
                     total_hours += task_in_slot['duration_in_hours']
                     html_content += f"""
-                    <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: red; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
+                    <div style="width: {task_in_slot['duration_in_hours'] * 100}px; background-color: red; border-right: 1px solid #000; padding: 10px; cursor: grab; user-select: none;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
                         <a href="javascript:void(0)"
                             class="text-white" data-toggle="modal"
                             data-target="#taskModaltask-{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
@@ -216,7 +218,7 @@ def get_context(context=None):
                     html_content += f"""
                     <div class="modal fade" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
                         aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
-                        <div class="modal-dialog" role="document">
+                        <div class="modal-dialog" role="document" style="max-width: 80%; margin: 1.75rem auto">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="taskModalLabel{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</h5>
@@ -260,10 +262,10 @@ def get_context(context=None):
                     count += task_in_slot["duration_in_hours"] - 1
                 else:
                     if count == 0:
-                        html_content += f'<div style="width: 100px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                        html_content += f'<div style="width: 100px; border-right: 1px solid #000; background-color: cyan; border: 2px dashed #ccc; min-height: 40px;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                     elif count % 1 == 0.5:
                         slot['time'] += timedelta(minutes=30)
-                        html_content += f'<div style="width: 50px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                        html_content += f'<div style="width: 50px; border-right: 1px solid #000; background-color: cyan; border: 2px dashed #ccc; min-height: 40px;" data-time="{slot["time"]}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                         count -= 0.5
                     else:
                         count -= 1

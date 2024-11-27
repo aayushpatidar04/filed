@@ -10,7 +10,9 @@ def get_context(context=None):
     context = context or {}
     user = frappe.session.user
 
-        
+    issues = []
+    technicians = []
+    
     if user == "Administrator":
         issues = frappe.get_all(
             "Maintenance Visit",
@@ -223,7 +225,7 @@ def get_context(context=None):
                         html_content += f"""
                         <div class="modal fade" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
                             aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
-                            <div class="modal-dialog" role="document">
+                            <div class="modal-dialog" role="document" style="max-width: 80%; margin: 1.75rem auto">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="taskModalLabel{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</h5>
@@ -267,10 +269,10 @@ def get_context(context=None):
                         count += task_in_slot["duration_in_hours"] - 1
                     else:
                         if count == 0:
-                            html_content += f'<div style="width: 25px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                            html_content += f'<div style="width: 25px; border-right: 1px solid #000; background-color: cyan;  min-height: 40px;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                         elif count % 1 == 0.5:
                             slot['time'] += timedelta(minutes=30)
-                            html_content += f'<div style="width: 12.5px; border-right: 1px solid #000; background-color: cyan;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
+                            html_content += f'<div style="width: 12.5px; border-right: 1px solid #000; background-color: cyan; min-height: 40px;" data-time="{slot["time"]}" data-date="{date}" data-tech="{tech.email}" data-na="{slot["not_available"]}" class="px-1 drop-zone">-</div>'
                             count -= 0.5
                         else:
                             count -= 1

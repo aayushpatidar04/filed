@@ -8,18 +8,17 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 	let script = document.createElement("script");
     script.src = "https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js";
     document.head.appendChild(script);
-
+	
 
 	const pageKey = 'reload_schedule_board';
 
-    // Check if this page has been visited before
     if (!localStorage.getItem(pageKey)) {
-        // If it's the first time, reload the page
         localStorage.setItem(pageKey, 'visited'); // Mark the page as visited
         window.location.reload(); // Reload the page
         return; // Exit the function to avoid further execution
     }
 	localStorage.removeItem(pageKey);
+
 
 	page.set_title("Schedule Board");
 	frappe.call({
@@ -49,6 +48,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				stime: form.find(".stime").val(),
 				etime: form.find(".etime").val()
 			};
+			console.log(formData);
 
 			// Make an API call to Frappe to save the data in your Doctype
 			frappe.call({
