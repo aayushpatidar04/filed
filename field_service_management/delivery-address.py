@@ -24,50 +24,18 @@ import json
 #     return full_addresses  # Returns a list of full Address documents
 
 
-# @frappe.whitelist()
-# def get_delivery_notes(doctype, txt, searchfield, start, page_len, filters):
-#     customer = filters.get("customer")
-#     if customer:
-#         delivery_notes = frappe.db.get_all(
-#             "Delivery Note", 
-#             filters={"customer": customer}, 
-#             fields=["DISTINCT shipping_address"],
-#             limit_start=start,
-#             limit_page_length=page_len
-#         )
-#         # result = []
-
-#         # # For each delivery note, fetch associated items from the child table
-#         # for note in delivery_notes:
-#         #     items = frappe.db.get_all(
-#         #         "Delivery Note Item", 
-#         #         filters={"parent": note.name},  # Link between Delivery Note and Delivery Note Item
-#         #         fields=["item_code", "item_name"]
-#         #     )
-            
-#         #     item_descriptions = ", ".join([f"{item['item_code']}: {item['item_name']}" for item in items])
-#         #     result.append((note.name, f"{note.shipping_address} | Items: {item_descriptions}"))
-#         # return result
-#         result = [(note.shipping_address) for note in delivery_notes if note.shipping_address]
-#         return result
-
-
 @frappe.whitelist()
-def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
-    # Convert filters from JSON string to a dictionary
-    filters = json.loads(filters) if isinstance(filters, str) else filters
-    
-    # customer = filters.get("customer")  # Now it can safely use .get()
-    
+def get_delivery_notes(customer):
     if customer:
-        # Fetch unique shipping addresses
         addresses = frappe.db.get_all(
             "Delivery Note",
             filters={"customer": customer},
             fields=["DISTINCT shipping_address"],
         )
         return [(address.shipping_address,) for address in addresses if address.shipping_address]
-    
+
+
+  
 
 
 @frappe.whitelist()
