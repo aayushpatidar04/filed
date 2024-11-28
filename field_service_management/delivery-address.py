@@ -4,7 +4,6 @@ import frappe
 
 @frappe.whitelist()
 def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
-    print(type(customer))
     if customer:
         
         addresses = frappe.db.get_all(
@@ -12,42 +11,41 @@ def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, fil
             filters={"customer": customer},
             fields=["DISTINCT shipping_address"],
         )
-        print(addresses)
         return [(address.shipping_address,) for address in addresses if address.shipping_address]
     
 
 
-@frappe.whitelist()
-def get_items_for_address(doctype, txt, searchfield, start, page_len, filters):
+# @frappe.whitelist()
+# def get_items_for_address(doctype, txt, searchfield, start, page_len, filters):
 
-    # Extract the shipping_address from filters
-    shipping_address = filters.get('shipping_address') if filters else None
+#     # Extract the shipping_address from filters
+#     shipping_address = filters.get('shipping_address') if filters else None
 
-    if not shipping_address:
-        return []
+#     if not shipping_address:
+#         return []
 
-    # Fetch delivery notes with the selected shipping address
-    delivery_notes = frappe.db.get_all(
-        "Delivery Note",
-        filters={"shipping_address": shipping_address},
-        fields=["name"]
-    )
+#     # Fetch delivery notes with the selected shipping address
+#     delivery_notes = frappe.db.get_all(
+#         "Delivery Note",
+#         filters={"shipping_address": shipping_address},
+#         fields=["name"]
+#     )
 
-    # Fetch items and their serial numbers from Delivery Note Items
-    items = []
-    for note in delivery_notes:
-        delivery_note_items = frappe.db.get_all(
-            "Delivery Note Item",
-            filters={"parent": note.name},  # Link between Delivery Note and Delivery Note Item
-            fields=["item_code", "item_name", "serial_no", "parent"]
-        )
-        items.extend(delivery_note_items)
+#     # Fetch items and their serial numbers from Delivery Note Items
+#     items = []
+#     for note in delivery_notes:
+#         delivery_note_items = frappe.db.get_all(
+#             "Delivery Note Item",
+#             filters={"parent": note.name},  # Link between Delivery Note and Delivery Note Item
+#             fields=["item_code", "item_name", "serial_no", "parent"]
+#         )
+#         items.extend(delivery_note_items)
 
-    # Return the items in the expected format (value and description)
-    return [
-        (item["item_code"], item)  # Passing the whole item object
-        for item in items
-    ]
+#     # Return the items in the expected format (value and description)
+#     return [
+#         (item["item_code"], item)  # Passing the whole item object
+#         for item in items
+#     ]
 
 
 @frappe.whitelist()
