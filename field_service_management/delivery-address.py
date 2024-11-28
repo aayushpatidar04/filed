@@ -24,18 +24,31 @@ import json
 #     return full_addresses  # Returns a list of full Address documents
 
 
+# @frappe.whitelist()
+# def get_delivery_notes(customer):
+#     if customer:
+#         addresses = frappe.db.get_all(
+#             "Delivery Note",
+#             filters={"customer": customer},
+#             fields=["DISTINCT shipping_address"],
+#         )
+#         return [(address.shipping_address,) for address in addresses if address.shipping_address]
+
+
 @frappe.whitelist()
-def get_delivery_notes(customer):
+def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
+    # Convert filters from JSON string to a dictionary
+    filters = json.loads(filters) if isinstance(filters, str) else filters
+    
     if customer:
+        # Fetch unique shipping addresses
         addresses = frappe.db.get_all(
             "Delivery Note",
             filters={"customer": customer},
             fields=["DISTINCT shipping_address"],
         )
         return [(address.shipping_address,) for address in addresses if address.shipping_address]
-
-
-  
+    
 
 
 @frappe.whitelist()
