@@ -1,52 +1,18 @@
 
 import frappe
-import json
-# In your custom app's file, for example: field_service/doctype/your_doctype/your_doctype.py
-
-# @frappe.whitelist()
-# def get_customer_addresses(customer):
-#     # Query the Address doctype and filter based on linked Customer
-#     addresses = frappe.db.sql("""
-#         SELECT parent 
-#         FROM `tabDynamic Link`
-#         WHERE parenttype = 'Address' 
-#         AND link_doctype = 'Customer'
-#         AND link_name = %s
-#     """, (customer,), as_dict=True)
-
-#     # Get the list of address names from the result
-#     address_list = [address.get('parent') for address in addresses]
-
-#     # Fetch full Address documents for each address
-#     full_addresses = []
-#     for address_name in address_list:
-#         full_addresses.append(frappe.get_doc('Address', address_name))
-#     return full_addresses  # Returns a list of full Address documents
-
-
-# @frappe.whitelist()
-# def get_delivery_notes(customer):
-#     if customer:
-#         addresses = frappe.db.get_all(
-#             "Delivery Note",
-#             filters={"customer": customer},
-#             fields=["DISTINCT shipping_address"],
-#         )
-#         return [(address.shipping_address,) for address in addresses if address.shipping_address]
 
 
 @frappe.whitelist()
 def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
-    # Convert filters from JSON string to a dictionary
-    filters = json.loads(filters) if isinstance(filters, str) else filters
-    
+    print(type(customer))
     if customer:
-        # Fetch unique shipping addresses
+        
         addresses = frappe.db.get_all(
             "Delivery Note",
             filters={"customer": customer},
             fields=["DISTINCT shipping_address"],
         )
+        print(addresses)
         return [(address.shipping_address,) for address in addresses if address.shipping_address]
     
 
