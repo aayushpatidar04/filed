@@ -2,7 +2,7 @@
 import frappe
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
     if customer:
         
@@ -15,7 +15,7 @@ def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, fil
     
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_items_for_address(doctype, txt, searchfield, start, page_len, filters):
 
     # Extract the shipping_address from filters
@@ -48,7 +48,7 @@ def get_items_for_address(doctype, txt, searchfield, start, page_len, filters):
     ]
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_delivery_note_data(delivery_address, item_code):
     """
     Fetch Delivery Notes and related Delivery Note Items for a given delivery address and item code.
@@ -78,7 +78,7 @@ def get_delivery_note_data(delivery_address, item_code):
     return items
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_item_table(name):
     childs = frappe.db.get_all(
         "Item Maintenance Table",
@@ -88,7 +88,7 @@ def get_item_table(name):
     return childs
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_symptoms_table(name):
     childs = frappe.db.get_all(
         "Symptom Resolution Table",
@@ -98,7 +98,7 @@ def get_symptoms_table(name):
     return childs
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_spare_items(name):
     childs = frappe.db.get_all(
         "Spare Part",
@@ -107,7 +107,7 @@ def get_spare_items(name):
     )
     return childs
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_item(name):
     childs = frappe.get_doc('Item', name)
     print(childs)
@@ -115,7 +115,7 @@ def get_item(name):
 
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_item_code_from_child_table(cdn):
     if frappe.has_permission('Maintenance Visit Purpose', 'read'):
         item_code = frappe.db.get_value('Maintenance Visit Purpose', cdn, 'item_code')
@@ -124,7 +124,7 @@ def get_item_code_from_child_table(cdn):
         frappe.throw(_("You do not have permission to access this resource."))
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def site_survey(name):
     childs = frappe.db.get_all(
         "Item Maintenance Table",
@@ -134,7 +134,7 @@ def site_survey(name):
     return childs
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def update_maintenance_visit(maintenance_visit, name):
     if not maintenance_visit:
         return
