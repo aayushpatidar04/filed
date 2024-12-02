@@ -5,7 +5,7 @@ import frappe
 @frappe.whitelist(allow_guest=True)
 def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
     if customer:
-
+        print('yes')
         addresses = frappe.db.get_all(
             "Delivery Note",
             filters={"customer": customer},
