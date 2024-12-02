@@ -4,15 +4,16 @@ import frappe
 
 @frappe.whitelist(allow_guest=True)
 def get_delivery_notes(customer, doctype, txt, searchfield, start, page_len, filters):
-    print('yes1')
+    frappe.log_error('yes1')
     if customer:
-        print('yes2')
+        frappe.log_error('yes2')
+
         addresses = frappe.db.get_all(
             "Delivery Note",
             filters={"customer": customer},
             fields=["DISTINCT shipping_address"],
         )
-        print('yes3')
+        frappe.log_error('yes1')
         return [(address.shipping_address,) for address in addresses if address.shipping_address]
     
 
