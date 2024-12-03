@@ -107,9 +107,26 @@ def get_maintenance():
 
 
         #geolocation
-        delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
+        delivery_note_name = frappe.get_value(
+            "Delivery Note",
+            {"shipping_address": visit_doc.delivery_address},
+            "name"  # Fetch the name of the Delivery Note
+        )
+
+        if not delivery_note_name:
+            frappe.throw(f"No Delivery Note found for address: {visit_doc.delivery_address}")
+
+        # Get the full Delivery Note document
+        delivery_note = frappe.get_doc("Delivery Note", delivery_note_name)
+
+        # Get the associated Address document
         address = frappe.get_doc("Address", delivery_note.shipping_address_name)
         geolocation = address.geolocation
+
+        if not geolocation:
+            frappe.throw(f"No geolocation found for address: {address.name}")
+
+        # Parse geolocation and assign it to the visit_doc
         geolocation = json.loads(geolocation)
         visit_doc.geolocation = geolocation
         
@@ -336,9 +353,21 @@ def get_maintenance_(name = None):
     visit_doc = frappe.get_doc("Maintenance Visit", name)
 
     #geolocation
-    delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
+    delivery_note_name = frappe.get_value(
+        "Delivery Note",
+        {"shipping_address": visit_doc.delivery_address},
+        "name"  # Fetch the name of the Delivery Note
+    )
+    if not delivery_note_name:
+        frappe.throw(f"No Delivery Note found for address: {visit_doc.delivery_address}")
+    # Get the full Delivery Note document
+    delivery_note = frappe.get_doc("Delivery Note", delivery_note_name)
+    # Get the associated Address document
     address = frappe.get_doc("Address", delivery_note.shipping_address_name)
     geolocation = address.geolocation
+    if not geolocation:
+        frappe.throw(f"No geolocation found for address: {address.name}")
+    # Parse geolocation and assign it to the visit_doc
     geolocation = json.loads(geolocation)
     visit_doc.geolocation = geolocation
     

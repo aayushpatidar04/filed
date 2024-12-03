@@ -49,9 +49,6 @@ def get_items_for_address(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist(allow_guest=True)
 def get_delivery_note_data(delivery_address, item_code):
-    """
-    Fetch Delivery Notes and related Delivery Note Items for a given delivery address and item code.
-    """
     if not frappe.has_permission("Delivery Note", "read"):
         frappe.throw("You do not have permission to access Delivery Notes.")
 
@@ -61,7 +58,6 @@ def get_delivery_note_data(delivery_address, item_code):
         filters={"shipping_address": delivery_address},
         fields=["name"]
     )
-
     if not delivery_notes:
         return []
 
@@ -69,7 +65,7 @@ def get_delivery_note_data(delivery_address, item_code):
     delivery_note_names = [dn["name"] for dn in delivery_notes]
 
     # Fetch Delivery Note Items
-    items = frappe.get_list(
+    items = frappe.db.get_all(
         "Delivery Note Item",
         filters={"item_code": item_code, "parent": ["in", delivery_note_names]},
         fields=["item_code", "item_name", "serial_no", "parent as delivery_note"]
