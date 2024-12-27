@@ -4,10 +4,6 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 		title: 'Schedule Board',
 		single_column: true
 	});
-
-	let script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js";
-    document.head.appendChild(script);
 	
 
 	const pageKey = 'reload_schedule_board';
@@ -34,6 +30,23 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 
 	
 	$(document).ready(function () {
+
+		$(document).on('click', '#select-day', function () {
+			var menu = $('#select-day-menu');
+        
+			if (menu.css('display') === 'none') {
+				menu.css('display', 'block'); // Show the menu
+			} else {
+				menu.css('display', 'none'); // Hide the menu
+			}
+		});
+
+		$(document).on('click', function (e) {
+			if (!$(e.target).closest('.dropdown').length) {
+				$('#select-day-menu').css('display', 'none');
+			}
+		});
+
 
 
 		$(document).on("click", ".submit", function () {
@@ -71,92 +84,99 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 		});
 
 
-		$(document).on('shown.bs.modal', '.issue-modal', function () {
-			const issueId = $(this).attr('id').replace('issueModal', '');
-			const mapContainerId = 'map-' + issueId;
-			const geoDiv = $('#map-' + issueId);
 
-			const geoDataString = geoDiv.attr('data-geo').replace(/'/g, '"');
-			const geoData = JSON.parse(geoDataString);
+		let liveMap = null;		
 
-			if (!geoDiv.length) {
-				console.error('Map container not found:', mapContainerId);
-				return;
-			}
 
-			if (geoDiv.data('mapInstance')) {
-				geoDiv.data('mapInstance').remove();
-				geoDiv.removeData('mapInstance'); // Clear the stored map instance
-			}
+		$(document).on('click', 'a[data-id]', function () {
+			const modalId = $(this).data('id'); // Get the modal ID
+			$(`#${modalId}`).removeClass('hide').addClass('show'); // Toggle classes
 
-			const map = L.map(mapContainerId).setView([0, 0], 13);
-			geoDiv.data('mapInstance', map);
+			if (modalId.startsWith('issue')) {
+				const issueId = modalId.replace('issueModal', '');
+				const mapContainerId = 'map-' + issueId;
+				const geoDiv = $('#map-' + issueId);
 
-			frappe.call({
-				method: "field_service_management.field_service_management.page.schedule_board.schedule_board.get_cords",
-				callback: function (r) {
-					if (r.message) {
-						const technicians = r.message;
+				const geoDataString = geoDiv.attr('data-geo').replace(/'/g, '"');
+				const geoData = JSON.parse(geoDataString);
 
-						// Check if the map container exists
-						let customerLat = null;
-						let customerLng = null;
-
-						// Add shapes/markers from geoData
-						geoData.forEach(feature => {
-							const { properties, geometry } = feature;
-							const [lng, lat] = geometry.coordinates;
-
-							if (Object.keys(properties).length === 0) {
-								customerLat = lat;
-								customerLng = lng;
-							} else if (properties.point_type === 'circle' && properties.radius) {
-								L.circle([lat, lng], {
-									radius: properties.radius,
-									color: 'blue',
-									fillColor: '#30a0ff',
-									fillOpacity: 0.3
-								}).addTo(map).bindPopup(`<b>Circle with radius: 300 meters</b>`);
-							}
-						});
-
-						// Center the map on the customer's location
-						if (customerLat !== null && customerLng !== null) {
-							map.setView([customerLat, customerLng], 13);
-							L.marker([customerLat, customerLng]).addTo(map)
-								.bindPopup('<b>Customer Location</b>').openPopup();
-						}
-
-						// Add OpenStreetMap tiles
-						L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-							maxZoom: 19,
-							attribution: '&copy; OpenStreetMap contributors'
-						}).addTo(map);
-
-						// Add technician markers
-						const greenIcon = L.icon({
-							iconUrl: '/private/files/green-marker51773a.png',
-							iconSize: [25, 41],
-							iconAnchor: [12, 41],
-							popupAnchor: [1, -34]
-						});
-
-						technicians.forEach(tech => {
-							L.marker([tech.latitude, tech.longitude], { icon: greenIcon }).addTo(map)
-								.bindPopup('<b>Technician: ' + tech.technician + '</b>');
-						});
-					} else {
-						console.log("No cords returned from the server.");
-					}
+				if (!geoDiv.length) {
+					console.error('Map container not found:', mapContainerId);
+					return;
 				}
-			});
+
+				if (geoDiv.data('mapInstance')) {
+					geoDiv.data('mapInstance').remove();
+					geoDiv.removeData('mapInstance'); // Clear the stored map instance
+				}
+
+				const map = L.map(mapContainerId).setView([10.790603876302452, 106.71873522574441], 13);
+				geoDiv.data('mapInstance', map);
+
+				frappe.call({
+					method: "field_service_management.field_service_management.page.schedule_board.schedule_board.get_cords",
+					callback: function (r) {
+						if (r.message) {
+							const technicians = r.message;
+
+							// Check if the map container exists
+							let customerLat = null;
+							let customerLng = null;
+
+							// Add shapes/markers from geoData
+							geoData.forEach(feature => {
+								const { properties, geometry } = feature;
+								const [lng, lat] = geometry.coordinates;
+
+								if (Object.keys(properties).length === 0) {
+									customerLat = lat;
+									customerLng = lng;
+								} else if (properties.point_type === 'circle' && properties.radius) {
+									L.circle([lat, lng], {
+										radius: properties.radius,
+										color: 'blue',
+										fillColor: '#30a0ff',
+										fillOpacity: 0.3
+									}).addTo(map).bindPopup(`<b>Circle with radius: 300 meters</b>`);
+								}
+							});
+
+							// Center the map on the customer's location
+							if (customerLat !== null && customerLng !== null) {
+								map.setView([customerLat, customerLng], 9);
+								L.marker([customerLat, customerLng]).addTo(map)
+									.bindPopup('<b>Customer</b><br><b>Latitude:</b> ' + customerLat + ' <b>Longitude:</b> ' + customerLng).openPopup();
+							}
+
+							// Add OpenStreetMap tiles
+							L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+								maxZoom: 19,
+								attribution: '&copy; OpenStreetMap contributors'
+							}).addTo(map);
+
+							// Add technician markers
+							const greenIcon = L.icon({
+								iconUrl: '/files/green-marker51773a.png',
+								iconSize: [25, 41],
+								iconAnchor: [12, 41],
+								popupAnchor: [1, -34]
+							});
+
+							technicians.forEach(tech => {
+								L.marker([tech.latitude, tech.longitude], { icon: greenIcon }).addTo(map)
+									.bindPopup('<b>Technician: ' + tech.technician + '</b>');
+							});
+						} else {
+							console.log("No cords returned from the server.");
+						}
+					}
+				});
+			}
 		});
 
-
-		let liveMap = null;
-		let updateInterval = null;
-
-		$(document).on('shown.bs.modal', '#mapModal', function () {
+		$(document).on('click', '#mapModalBtn', function () { 	
+			modal = $('#mapModal');
+			modal.removeClass('hide').addClass('show');
 			const mapContainerId = 'live-map-container';
 			const mapDiv = $('#' + mapContainerId);
 
@@ -167,7 +187,7 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 			}
 
 			// Initialize the map
-			liveMap = L.map(mapContainerId).setView([0, 0], 5); // Initial view centered on India
+			liveMap = L.map(mapContainerId).setView([10.790603876302452, 106.71873522574441], 5); // Initial view centered on India
 			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 				maxZoom: 19,
 				attribution: '&copy; OpenStreetMap contributors'
@@ -175,7 +195,43 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 
 			// Define custom icons for technicians and maintenance visits
 			const technicianIcon = L.icon({
-				iconUrl: '/private/files/green-marker51773a.png',
+				iconUrl: '/files/green-marker51773a.png',
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34]
+			});
+			const greenIcon = L.icon({
+				iconUrl: '/files/green-marker.png',
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34]
+			});
+			const yellowIcon = L.icon({
+				iconUrl: '/files/yellow-marker.png',
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34]
+			});
+			const blueIcon = L.icon({
+				iconUrl: '/files/blue-marker.png',
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34]
+			});
+			const redIcon = L.icon({
+				iconUrl: '/files/red-marker.png',
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34]
+			});
+			const whiteIcon = L.icon({
+				iconUrl: '/files/white-marker.png',
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34]
+			});
+			const blackIcon = L.icon({
+				iconUrl: '/files/black-marker.png',
 				iconSize: [25, 41],
 				iconAnchor: [12, 41],
 				popupAnchor: [1, -34]
@@ -231,12 +287,26 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 								} else {
 									console.error('Geolocation data is not in the correct format or missing');
 								}
-								
+								if(visit.type == 'Unscheduled'){
+									finalIcon = redIcon;
+								} else if(visit.type == 'Fresh Installation'){
+									finalIcon = whiteIcon;
+								}else if(visit.type == 'Scheduled'){
+									finalIcon = greenIcon;
+								}else if(visit.type == 'Rescheduled'){
+									finalIcon = blackIcon;
+								}else if(visit.type == 'Site Survey'){
+									finalIcon = blueIcon;
+								}
+								if(visit.status == 'Approval Pending'){
+									finalIcon = yellowIcon;
+								}
+
 								if (customerLat !== null && customerLng !== null) {
-									liveMap.setView([customerLat, customerLng], 13);
-									L.marker([customerLat, customerLng])
+									liveMap.setView([customerLat, customerLng],7);
+									L.marker([customerLat, customerLng], { icon: finalIcon })
 										.addTo(liveMap)
-										.bindPopup(`<b>Maintenance Visit</b><br>${visit.visit_id}<br>${visit.address}`);
+										.bindPopup(`<b>Maintenance Visit</b><br>${visit.visit_id} - ${visit.type} - ${visit.status}<br><b>${visit.customer}</b><br>${visit.address}`);
 								}
 							});
 						} else {
@@ -250,69 +320,52 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 			fetchAndDisplayLocations();
 
 			// Set an interval to update locations periodically (every 30 seconds)
-			updateInterval = setInterval(fetchAndDisplayLocations, 30000);
-		});
-
-		// Clean up when the modal is hidden
-		$(document).on('hidden.bs.modal', '#liveLocationModal', function () {
-			if (liveMap) {
-				liveMap.remove();
-				liveMap = null;
-			}
-			if (updateInterval) {
-				clearInterval(updateInterval);
-				updateInterval = null;
-			}
+			updateInterval = setInterval(fetchAndDisplayLocations, 120000);
 		});
 
 
 		setTimeout(function () {
 
-			var drags = $('.drag');
-			$('.drag').each(function () {
-				$(this).on('dragstart', function (e) {
-					e.originalEvent.dataTransfer.setData('text/plain', this.id); // Store the ID of the dragging card
-					setTimeout(() => {
-						$(this).css('opacity', '0.5'); // Visual feedback on drag start
-					}, 0);
-				});
-
-				$(this).on('dragend', function () {
-					$(this).css('opacity', '1'); // Reset opacity on drag end
-				});
+			$(document).on('dragstart', '.drag', function (event) {
+				const draggable = $(this);
+				event.originalEvent.dataTransfer.setData('text/plain', draggable.attr('id'));
+				draggable.css('opacity', '0.5');
 			});
-
-			var dropZones = $('.drop-zone');
-
-			$('.drop-zone').each(function () {
-				$(this).on('dragover', function (e) {
-					e.preventDefault(); // Prevent default to allow drop
-					$(this).addClass('drop-hover'); // Add hover class
-					$(this).css('background-color', 'green'); // Change background color to green
-				});
-
-				$(this).on('dragleave', function () {
-					$(this).removeClass('drop-hover'); // Remove hover class
-					$(this).css('background-color', 'cyan'); // Reset background color
-				});
-
-				$(this).on('drop', function (e) {
-					e.preventDefault(); // Prevent default action
-					const cardId = e.originalEvent.dataTransfer.getData('text/plain'); // Get the ID of the dragged card
-					const slotTime = $(this).data('time');
-					const not_available = $(this).data('na');
-					const tech = $(this).data('tech');
-					const card = $('#' + cardId); // Select the card by ID
-					$(this).removeClass('drop-hover'); // Remove hover class
-					$(this).css('background-color', 'cyan'); // Reset background color
-					// Open modal for the dropped card using its issue name
-					if (card.data('type') == 'type1') {
-						openModal(cardId, slotTime, tech, not_available);
-					} else if (card.data('type') == 'type2') {
-						const duration = card.data('duration');
-						openModal2(cardId, slotTime, tech, duration, not_available);
-					}
-				});
+		
+			$(document).on('dragend', '.drag', function () {
+				$(this).css('opacity', '1');
+			});
+		
+			$(document).on('dragover', '.drop-zone', function (event) {
+				event.preventDefault();
+				const dropZone = $(this);
+				dropZone.addClass('drop-hover');
+				dropZone.css('background-color', 'green');
+			});
+		
+			$(document).on('dragleave', '.drop-zone', function () {
+				const dropZone = $(this);
+				dropZone.removeClass('drop-hover');
+				dropZone.css('background-color', 'cyan');
+			});
+		
+			$(document).on('drop', '.drop-zone', function (event) {
+				event.preventDefault();
+				const dropZone = $(this);
+				const cardId = event.originalEvent.dataTransfer.getData('text/plain');
+				const not_available = dropZone.data('na');
+				const slotTime = dropZone.data('time');
+				const tech = dropZone.data('tech');
+				const card = $(`#${cardId}`);
+				dropZone.removeClass('drop-hover');
+				dropZone.css('background-color', 'cyan');
+		
+				if (card.data('type') === 'type1') {
+					openModal(cardId, slotTime, tech, not_available);
+				} else if (card.data('type') === 'type2') {
+					const duration = card.data('duration');
+					openModal2(cardId, slotTime, tech, duration, not_available);
+				}
 			});
 
 			function openModal(issueName, slot, tech, na) {
@@ -320,12 +373,11 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				const modal = $(`#${modalId}`); // Select the modal using jQuery
 
 				if (modal.length) { // Check if the modal exists
-					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
 					const currentDate = new Date();
 					const year = currentDate.getFullYear();
 					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
 					const day = String(currentDate.getDate()).padStart(2, '0');
-					modalInstance.show(); // Show the modal
+					modal.removeClass('hide').addClass('show');
 					const [hours, minutes, seconds] = slot.split(':').map(Number);
 					if (hours < 10) {
 						const stime_val = '0' + slot.substring(0, 4)
@@ -365,12 +417,13 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 				const modalId = `taskModal${issueName}`; // Construct the modal ID
 				const modal = $(`#${modalId}`); // Select the modal using jQuery
 				if (modal.length) { // Check if the modal exists
-					const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
+					// const modalInstance = new bootstrap.Modal(modal[0]); // Pass the raw DOM element to bootstrap.Modal
 					const currentDate = new Date();
 					const year = currentDate.getFullYear();
 					const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
 					const day = String(currentDate.getDate()).padStart(2, '0');
-					modalInstance.show(); // Show the modal
+					// modalInstance.show(); // Show the modal
+					modal.removeClass('hide').addClass('show');
 					const [hours, minutes, seconds] = slot.split(':').map(Number);
 					let startTime = new Date();
 					startTime.setHours(hours, minutes, seconds);
@@ -408,32 +461,13 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 					console.error(`Modal with ID ${modalId} not found.`);
 				}
 			}
+
+
 			$(document).on('click', '.close', function () {
-				$(this).closest('.modal').modal('hide'); // Ensure the modal hides on close
+				$(this).closest('.modal').removeClass('show').addClass('hide'); // Ensure the modal hides on close
 			});
 			$('.technician').select2();
 
-			var etime = $('.etime');
-			etime.each(function () {
-				$(this).on('change', function (e) {
-					setTimeout(() => {
-						const timeValue = $(this).val();
-						const stime = $(this).data('stime').split(':');
-						if (timeValue) {
-							const [hours, minutes] = timeValue.split(':').map(Number);
-							if (minutes % 30 !== 0) {
-								alert('Please select a time that is a multiple of 30 minutes.');
-								$(this).val(''); // Clear the input
-								$(this).focus(); // Focus back on the input
-							}else if(stime[0] >= hours){
-								alert('Please select a time that is greater than start time.');
-								$(this).val(''); // Clear the input
-								$(this).focus();
-							}
-						}
-					}, 1000);  // Focus back on the input
-				});
-			});
 
 			$('.nav-link').on('click', function (event) {
 				// Prevent default action
@@ -490,5 +524,3 @@ frappe.pages['schedule-board'].on_page_load = function (wrapper) {
 
 
 }
-
-

@@ -13,7 +13,8 @@ def get_context(context=None):
     issues = []
     technicians = []
     
-    if user == "Administrator":
+    role_profile = frappe.db.get_value("User", user, "role_profile_name")
+    if "BMSCG Admin" in frappe.get_roles(frappe.session.user):
         issues = frappe.get_all(
             "Maintenance Visit",
             filters={"_assign": ""},
@@ -27,7 +28,8 @@ def get_context(context=None):
                 "description",
                 "maintenance_description",
                 "customer_address",
-                "completion_status"
+                "completion_status",
+                "customer"
             ],
         )
         technicians = frappe.get_all(
@@ -35,7 +37,6 @@ def get_context(context=None):
             filters={"role_profile_name": "Service Technician Role Profile"},
             fields=["email", "user_image", "full_name"],
         )
-    role_profile = frappe.db.get_value("User", user, "role_profile_name")
     if role_profile == "Service Coordinator Profile":
         # Fetch the user's territory from User Permissions
         
@@ -56,7 +57,8 @@ def get_context(context=None):
                 "description",
                 "maintenance_description",
                 "customer_address",
-                "completion_status"
+                "completion_status",
+                "customer"
             ],
         )
         technicians = frappe.get_all(
@@ -85,7 +87,6 @@ def get_context(context=None):
         #geolocation --------------------------------------------------
         geolocation = frappe.get_all('Address', filters = {'name' : issue.customer_address}, fields = ['geolocation'])
         geolocation = json.loads(geolocation[0].geolocation)
-        print(geolocation)
         issue.geolocation = json.dumps(geolocation['features']).replace('"', "'")
         # issue.geolocation = geolocation
         # checklist tree ----------------------------------------------
@@ -218,12 +219,11 @@ def get_context(context=None):
                         html_content += f"""
                         <div style="width: {task_in_slot['duration_in_hours'] * 25}px; background-color: red; border-right: 1px solid #000;" class="px-1 py-2 text-white text-center drag" data-type="type2" draggable="true" id="task-{task_in_slot['issue_code']}" data-duration="{task_in_slot['duration_in_hours']}">
                             <a href="javascript:void(0)"
-                                class="text-white" data-toggle="modal"
-                                data-target="#taskModaltask-{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
+                                class="text-white" data-id="taskModaltask-{task_in_slot['issue_code']}">{task_in_slot['issue_code']}</a>
                         </div>
                         """
                         html_content += f"""
-                        <div class="modal fade" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
+                        <div class="modal hide" id="taskModaltask-{task_in_slot['issue_code']}" tabindex="-1" role="dialog"
                             aria-labelledby="taskModalLabel{task_in_slot['issue_code']}" aria-hidden="true">
                             <div class="modal-dialog" role="document" style="max-width: 80%; margin: 1.75rem auto">
                                 <div class="modal-content">
@@ -297,10 +297,14 @@ def save_form_data(form_data):
         date = form_data["date"]
         etime = form_data["etime"]
         stime = form_data["stime"]
-        hours, minutes = map(int, etime.split(":"))
-        etime = timedelta(hours=hours, minutes=minutes)
-        hours, minutes = map(int, stime.split(":"))
-        stime = timedelta(hours=hours, minutes=minutes)
+        ehours, eminutes = map(int, etime.split(":"))
+        etime = timedelta(hours=ehours, minutes=eminutes)
+        shours, sminutes = map(int, stime.split(":"))
+        stime = timedelta(hours=shours, minutes=sminutes)
+        if eminutes % 30 != 0:
+            frappe.throw("Please select a time that is a multiple of 30 minutes.")
+        if stime >= etime:
+            frappe.throw("Please select a time that is greater than the start time.")
         for tech in technicians:
             assigned_tasks = frappe.get_all(
                 "Assigned Tasks",
@@ -485,7 +489,7 @@ def get_live_locations():
         })
     
     maintenance_records = frappe.db.sql("""
-        SELECT name, address_html, delivery_address
+        SELECT name, delivery_address, customer, maintenance_type, completion_status
         FROM `tabMaintenance Visit`
         WHERE completion_status != 'Fully Completed'
     """, as_dict=True)
@@ -494,15 +498,25 @@ def get_live_locations():
     for visit in maintenance_records:
         visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
         #geolocation
-        delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
-        address = frappe.get_doc("Address", delivery_note.shipping_address_name)
+        
+        delivery_note_name = frappe.get_value(
+            "Serial No",
+            {"custom_item_current_installation_address": visit_doc.delivery_address},
+            "custom_item_current_installation_address_name"
+        )
+        if not delivery_note_name:
+            frappe.throw(f"No Delivery Note found for address: {visit_doc.delivery_address}")
+        address = frappe.get_doc("Address", delivery_note_name)
         geolocation = address.geolocation
         geolocation = json.loads(geolocation)
 
         maintenance_visits.append({
             "visit_id": visit.name,
             "geolocation": geolocation,
-            "address": visit.address_html
+            "address": visit.delivery_address,
+            "customer": visit.customer,
+            "type": visit.maintenance_type,
+            "status": visit.completion_status
         })    
     return {
         "technicians": technicians,

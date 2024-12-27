@@ -5,13 +5,20 @@
  "doctype": "Page",
  "icon": "fa fa-filter",
  "idx": 0,
- "modified": "2024-11-11 17:18:02.453922",
+ "modified": "2024-12-26 12:46:53.402849",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "schedule-board-last7",
  "owner": "Administrator",
  "page_name": "schedule-board-last7",
- "roles": [],
+ "roles": [
+  {
+   "role": "BMSCG Admin"
+  },
+  {
+   "role": "Service Coordinator"
+  }
+ ],
  "script": null,
  "standard": "Yes",
  "style": null,

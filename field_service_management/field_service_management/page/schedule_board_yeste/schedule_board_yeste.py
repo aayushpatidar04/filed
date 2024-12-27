@@ -13,7 +13,8 @@ def get_context(context=None):
     issues = []
     technicians = []
       
-    if user == "Administrator":
+    role_profile = frappe.db.get_value("User", user, "role_profile_name")
+    if "BMSCG Admin" in frappe.get_roles(frappe.session.user):
         issues = frappe.get_all(
             "Maintenance Visit",
             filters={"_assign": ""},
@@ -27,7 +28,8 @@ def get_context(context=None):
                 "description",
                 "maintenance_description",
                 "customer_address",
-                "completion_status"
+                "completion_status",
+                "customer"
             ],
         )
         technicians = frappe.get_all(
@@ -35,7 +37,6 @@ def get_context(context=None):
             filters={"role_profile_name": "Service Technician Role Profile"},
             fields=["email", "user_image", "full_name"],
         )
-    role_profile = frappe.db.get_value("User", user, "role_profile_name")
     if role_profile == "Service Coordinator Profile":
         # Fetch the user's territory from User Permissions
         
@@ -56,7 +57,8 @@ def get_context(context=None):
                 "description",
                 "maintenance_description",
                 "customer_address",
-                "completion_status"
+                "completion_status",
+                "customer"
             ],
         )
         technicians = frappe.get_all(
@@ -85,7 +87,6 @@ def get_context(context=None):
         #geolocation --------------------------------------------------
         geolocation = frappe.get_all('Address', filters = {'name' : issue.customer_address}, fields = ['geolocation'])
         geolocation = json.loads(geolocation[0].geolocation)
-        print(geolocation)
         issue.geolocation = json.dumps(geolocation['features']).replace('"', "'")
         # issue.geolocation = geolocation
         # checklist tree ----------------------------------------------
@@ -288,10 +289,14 @@ def save_form_data(form_data):
         date = form_data["date"]
         etime = form_data["etime"]
         stime = form_data["stime"]
-        hours, minutes = map(int, etime.split(":"))
-        etime = timedelta(hours=hours, minutes=minutes)
-        hours, minutes = map(int, stime.split(":"))
-        stime = timedelta(hours=hours, minutes=minutes)
+        ehours, eminutes = map(int, etime.split(":"))
+        etime = timedelta(hours=ehours, minutes=eminutes)
+        shours, sminutes = map(int, stime.split(":"))
+        stime = timedelta(hours=shours, minutes=sminutes)
+        if eminutes % 30 != 0:
+            frappe.throw("Please select a time that is a multiple of 30 minutes.")
+        if stime >= etime:
+            frappe.throw("Please select a time that is greater than the start time.")
         for tech in technicians:
             assigned_tasks = frappe.get_all(
                 "Assigned Tasks",
@@ -477,7 +482,7 @@ def get_live_locations():
         })
     
     maintenance_records = frappe.db.sql("""
-        SELECT name, address_html, delivery_address
+        SELECT name, delivery_address, customer, maintenance_type, completion_status
         FROM `tabMaintenance Visit`
         WHERE completion_status != 'Fully Completed'
     """, as_dict=True)
@@ -486,7 +491,15 @@ def get_live_locations():
     for visit in maintenance_records:
         visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
         #geolocation
-        delivery_note = frappe.get_doc("Delivery Note", visit_doc.delivery_address)
+        
+        delivery_note_name = frappe.get_value(
+            "Delivery Note",
+            {"shipping_address": visit_doc.delivery_address},
+            "name"  # Fetch the name of the Delivery Note
+        )
+        if not delivery_note_name:
+            frappe.throw(f"No Delivery Note found for address: {visit_doc.delivery_address}")
+        delivery_note = frappe.get_doc("Delivery Note", delivery_note_name)
         address = frappe.get_doc("Address", delivery_note.shipping_address_name)
         geolocation = address.geolocation
         geolocation = json.loads(geolocation)
@@ -494,7 +507,10 @@ def get_live_locations():
         maintenance_visits.append({
             "visit_id": visit.name,
             "geolocation": geolocation,
-            "address": visit.address_html
+            "address": visit.delivery_address,
+            "customer": visit.customer,
+            "type": visit.maintenance_type,
+            "status": visit.completion_status
         })    
     return {
         "technicians": technicians,

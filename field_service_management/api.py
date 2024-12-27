@@ -79,16 +79,27 @@ def get_maintenance():
         },
         fields="name"
     )
-    # maintenance_visits = []
-    # for visit in maintenance_visits_:
-    #     maintenance_visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
-    #     maintenance_visits.append(maintenance_visit_doc.as_dict())
-    # return maintenance_visits
+    
 
 
     visits_with_details = []
     for visit in maintenance_visits:
         visit_doc = frappe.get_doc("Maintenance Visit", visit.name)
+
+        #visit-start-time
+        latest_visit_start = frappe.db.get_value(
+            "Visit Start Maintenance",
+            {
+                "parent": visit.name,
+                "technician": user,
+            },
+            "visit_start_at",
+            order_by="visit_start_at DESC"
+        )
+        visit_doc.update({
+            "visit_start": latest_visit_start if latest_visit_start else "",
+        })
+
 
         #start-end time
         assigned_task = frappe.get_all(
@@ -100,10 +111,35 @@ def get_maintenance():
             order_by='creation desc',
             fields=['*']
         )
-        visit_doc.update({
-            "mntc_time": assigned_task[0].stime if assigned_task else "",
-            "mntc_date": assigned_task[0].etime if assigned_task else "",
-        })
+        visit_data = visit_doc.as_dict()
+        visit_data['start_time'] = assigned_task[0].stime if assigned_task else ""
+        visit_data['end_time'] = assigned_task[0].etime if assigned_task else ""
+
+        
+        #punch-in-punch-out
+        latest_punch_in = frappe.db.get_value(
+            "Punch In Punch Out",
+            {
+                "parent": visit.name,
+                "technician": user,
+                "punch_in": ["is", "set"]
+            },
+            "punch_in",
+            order_by="punch_in DESC"
+        )
+        latest_punch_out = frappe.db.get_value(
+            "Punch In Punch Out",
+            {
+                "parent": visit.name,
+                "technician": user,
+                "punch_out": ["is", "set"]
+            },
+            "punch_out",
+            order_by="punch_out DESC"
+        )
+        visit_data["latest_punch_in"] = latest_punch_in if latest_punch_in else ""
+        visit_data["latest_punch_out"] = latest_punch_out if latest_punch_out else ""
+
 
 
         #geolocation
@@ -128,7 +164,7 @@ def get_maintenance():
 
         # Parse geolocation and assign it to the visit_doc
         geolocation = json.loads(geolocation)
-        visit_doc.geolocation = geolocation
+        visit_data["geolocation"] = geolocation
         
         # Initialize a new dictionary for checktree_description
         checktree_description = {}
@@ -147,7 +183,7 @@ def get_maintenance():
             symptoms_table[item_code].append(item.as_dict())
         
         # Create a dictionary for the current visit, including the reformatted child tables
-        visit_data = visit_doc.as_dict()
+       
         visit_data['checktree_description'] = checktree_description
         visit_data['symptoms_table'] = symptoms_table
         
@@ -225,8 +261,8 @@ def start_maintenance_visit(name):
         frappe.db.commit()
 
         maintenance.reload()
-        if maintenance.visit_start is None:
-            maintenance.visit_start = now()
+        # if maintenance.visit_start is None:
+            # maintenance.visit_start = now()
         maintenance.flags.ignore_permissions = True
         maintenance.save()
         
@@ -341,7 +377,13 @@ def update_punch_in_out(maintenance_visit, punch_in=None, punch_out=None, visit_
             frappe.db.commit()
             status_msg = "Punch-out recorded"
             if is_completed == 'yes':
-                status_msg += " and visit marked as completed"
+                status_msg += " and visit marked as Approval Pending"
+                frappe.db.sql(
+                """
+                    UPDATE `tabMaintenance Visit` SET `completion_status` = %s WHERE name = %s
+                """,
+                    ('Approval Pending', maintenance_visit),
+                )
             return {"status": "success", "message": status_msg}
         else:
             frappe.throw("No active punch-in record found to update.")
@@ -350,7 +392,75 @@ def update_punch_in_out(maintenance_visit, punch_in=None, punch_out=None, visit_
 
 @frappe.whitelist(allow_guest=True)
 def get_maintenance_(name = None):
+
+    authorization_header = frappe.get_request_header("Authorization")
+    if not authorization_header:
+        return { "status": "error", "message": "Missing Authorization header"}
+    api_key = frappe.get_request_header("Authorization").split(" ")[1].split(":")[0]
+    # Find the user associated with the API key
+    user = frappe.db.get_value("User", {"api_key": api_key}, "name")
+    
+    if not user:
+        return {"status": "failed", "message": "Invalid API key"}
+    
     visit_doc = frappe.get_doc("Maintenance Visit", name)
+
+    #visit-start-time
+    latest_visit_start = frappe.db.get_value(
+        "Visit Start Maintenance",
+        {
+            "parent": name,
+            "technician": user,
+        },
+        "visit_start_at",
+        order_by="visit_start_at DESC"
+    )
+    visit_doc.update({
+        "visit_start": latest_visit_start if latest_visit_start else "",
+    })
+
+
+    #start-end time
+    assigned_task = frappe.get_all(
+        "Assigned Tasks",
+        filters={
+            "technician": user, "status": "Pending", "issue_code": name
+        },
+        limit_page_length=1,
+        order_by='creation desc',
+        fields=['*']
+    )
+
+    
+
+    visit_data = visit_doc.as_dict()
+    visit_data["start_time"] = assigned_task[0].stime if assigned_task else ""
+    visit_data["end_time"] = assigned_task[0].etime if assigned_task else ""
+
+    #punch-in-punch-out
+    latest_punch_in = frappe.db.get_value(
+        "Punch In Punch Out",
+        {
+            "parent": name,
+            "technician": user,
+            "punch_in": ["is", "set"],
+            "completed": 'no'
+        },
+        "punch_in",
+        order_by="punch_in DESC"
+    )
+    latest_punch_out = frappe.db.get_value(
+        "Punch In Punch Out",
+        {
+            "parent": name,
+            "technician": user,
+            "punch_out": ["is", "set"]
+        },
+        "punch_out",
+        order_by="punch_out DESC"
+    )
+    visit_data["latest_punch_in"] = latest_punch_in if latest_punch_in else ""
+    visit_data["latest_punch_out"] = latest_punch_out if latest_punch_out else ""
 
     #geolocation
     delivery_note_name = frappe.get_value(
@@ -369,7 +479,7 @@ def get_maintenance_(name = None):
         frappe.throw(f"No geolocation found for address: {address.name}")
     # Parse geolocation and assign it to the visit_doc
     geolocation = json.loads(geolocation)
-    visit_doc.geolocation = geolocation
+    visit_data["geolocation"] = geolocation
     
     # Initialize a new dictionary for checktree_description
     checktree_description = {}
@@ -388,7 +498,6 @@ def get_maintenance_(name = None):
         symptoms_table[item_code].append(item.as_dict())
     
     # Create a dictionary for the current visit, including the reformatted child tables
-    visit_data = visit_doc.as_dict()
     visit_data['checktree_description'] = checktree_description
     visit_data['symptoms_table'] = symptoms_table
 
@@ -691,7 +800,106 @@ def add_reschedule_requests(maintenance_visit, type, reason, date, hours):
     return {"status": "success", "message": "Reschedule Request submitted successfully!"}
 
 
+@frappe.whitelist(allow_guest=True)
+def update_shipping_address():
+    # Get all rows with a valid delivery_document_no
+    records = frappe.get_all(
+        'Serial No',
+        filters={'delivery_document_no': ['is', 'set']},
+        fields=['name', 'delivery_document_no']
+    )
+    updated_count = 0
+    
+    for record in records:
+        # Fetch the shipping_address from Delivery Note
+        
+        shipping_address_name = frappe.db.get_value(
+            'Delivery Note',
+            record.delivery_document_no,
+            'shipping_address_name'
+        )
+        address = frappe.db.get_value(
+            "Address",
+            shipping_address_name,
+            ["address_line1", "address_line2", "ward_name", "district", "town", "province", "country", "phone", "fax"],
+            as_dict=True
+        )
 
+        if not address:
+            shipping_address = None
+        else:
+        # Construct the address in the desired format
+            address_string = f"{address['address_line1']}<br>"
+            
+            if address['address_line2']:
+                address_string += f"{address['address_line2']}<br>"
+            
+            if address['ward_name']:
+                address_string += f"{address['ward_name']}<br>"
+            
+            if address['district']:
+                address_string += f"{address['district']}<br>"
+            
+            address_string += f"{address['town']}<br>"
+            
+            if address['province']:
+                address_string += f"{address['province']}<br>"
+            
+            address_string += f"{address['country']}<br>"
+            
+            if address['phone']:
+                address_string += f"Phone: {address['phone']}<br>"
+            
+            if address['fax']:
+                address_string += f"Fax: {address['fax']}<br>"
+            
+            shipping_address = address_string
+    
+        if shipping_address:
+            # Update the shipping_address field in your Doctype
+            frappe.db.set_value('Serial No', record.name, 'custom_item_current_installation_address', shipping_address)
+            frappe.db.set_value('Serial No', record.name, 'custom_item_current_installation_address_name', shipping_address_name)
+            frappe.db.commit()
+            updated_count += 1
+    
+    return {"message": f"{updated_count} rows updated successfully."}
 
+@frappe.whitelist(allow_guest=True)
+def populate_initial_serial_card_history():
+    
+    serial_cards = frappe.get_all('Serial No', fields=['name', 'customer', 'custom_item_current_installation_address_name'])
+    updated_count = 0
 
+    for serial_card in serial_cards:
+        # Check if there is already an entry in the Serial Card History for this Serial Card
+        existing_history = frappe.get_all(
+            'Serial Card History',
+            filters={
+                'parent': serial_card.name,
+                'parentfield': 'custom_serial_card_history',
+                'parenttype': 'Serial No'
+            },
+            fields=['name']
+        )
+        
+        if not existing_history:
+            frappe.db.sql("""
+                INSERT INTO `tabSerial Card History`
+                (name, parent, parentfield, parenttype, customer, address, serial_no)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                frappe.generate_hash("Serial Card History", 10),  # Generate unique name
+                serial_card.name,  # Parent Serial No
+                'custom_serial_card_history',  # Parent field
+                'Serial No',  # Parent type
+                serial_card.customer,  # Customer
+                serial_card.custom_item_current_installation_address_name,  # Address
+                serial_card.name  # Serial No
+            ))
+            frappe.db.commit()
+            updated_count += 1
+
+    return {
+        "message": f"{updated_count} Serial No records updated successfully."
+    }
 
