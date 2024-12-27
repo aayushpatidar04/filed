@@ -492,14 +492,13 @@ def get_live_locations():
         #geolocation
         
         delivery_note_name = frappe.get_value(
-            "Delivery Note",
-            {"shipping_address": visit_doc.delivery_address},
-            "name"  # Fetch the name of the Delivery Note
+            "Serial No",
+            {"custom_item_current_installation_address": visit_doc.delivery_address},
+            "custom_item_current_installation_address_name"
         )
         if not delivery_note_name:
-            frappe.throw(f"No Delivery Note found for address: {visit_doc.delivery_address}")
-        delivery_note = frappe.get_doc("Delivery Note", delivery_note_name)
-        address = frappe.get_doc("Address", delivery_note.shipping_address_name)
+            frappe.throw(f"No Serial No found for address: {visit_doc.delivery_address}")
+        address = frappe.get_doc("Address", delivery_note_name)
         geolocation = address.geolocation
         geolocation = json.loads(geolocation)
 
